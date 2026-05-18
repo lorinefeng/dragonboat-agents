@@ -19,6 +19,7 @@ target/
 .dragonboat/
 .dragonboat-runs/
 .dragonboat-worktrees/
+.worktrees/
 
 # Environment
 .env
