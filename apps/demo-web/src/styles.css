@@ -1,0 +1,302 @@
+:root {
+  color: #172026;
+  background: #f6f8fb;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1220px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 28px 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 0 24px;
+}
+
+.topbar p,
+.topbar h1 {
+  margin: 0;
+}
+
+.topbar p {
+  color: #52616b;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.topbar h1 {
+  margin-top: 4px;
+  color: #11181c;
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1.02;
+}
+
+.run-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.run-actions span {
+  padding: 8px 10px;
+  border: 1px solid #d9e1e7;
+  border-radius: 8px;
+  color: #52616b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.run-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #e4513d;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 12px 24px rgba(228, 81, 61, 0.24);
+}
+
+.run-actions button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.run-actions svg,
+.panel-heading svg,
+.evidence-row svg,
+.empty-state svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.35fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid #d9e1e7;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 44px rgba(25, 36, 44, 0.08);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid #edf1f4;
+}
+
+.panel-heading h2 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.crew-list,
+.task-grid,
+.timeline {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.crew-row,
+.task-row,
+.timeline-item,
+.evidence-row {
+  border: 1px solid #edf1f4;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.crew-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+}
+
+.crew-row h3,
+.task-row h3,
+.evidence-row h3 {
+  margin: 0;
+  color: #172026;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.crew-row p,
+.evidence-row p {
+  margin: 4px 0 0;
+  color: #52616b;
+  font-size: 12px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e8f5f1;
+  color: #0b796b;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.task-panel {
+  grid-row: span 2;
+}
+
+.task-row {
+  padding: 14px;
+}
+
+.task-topline,
+.timeline-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #52616b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.progress-track {
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf1f4;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0f9f8f, #e4513d);
+}
+
+.mailbox-panel {
+  grid-row: span 2;
+}
+
+.timeline-item {
+  padding: 12px;
+}
+
+.timeline-item p {
+  margin: 0;
+  color: #172026;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.evidence-row {
+  display: flex;
+  gap: 10px;
+  margin: 12px;
+  padding: 12px;
+}
+
+.evidence-row svg {
+  color: #0f9f8f;
+  flex: 0 0 auto;
+}
+
+.inline-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff1ef;
+  color: #9f2f21;
+  font-weight: 700;
+}
+
+.empty-state {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  padding: 28px;
+  text-align: center;
+}
+
+@media (max-width: 920px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-panel,
+  .mailbox-panel {
+    grid-row: auto;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-shell {
+    width: min(100vw - 20px, 1220px);
+    padding: 12px 0;
+  }
+
+  .run-actions {
+    align-items: stretch;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .run-actions button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .crew-row,
+  .task-topline,
+  .timeline-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "dragonboat-crew",
+  "version": "0.0.0-private",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "demo:dev": "npm run dev -w @dragonboat/demo-web",
+    "demo:test": "npm test -w @dragonboat/demo-web",
+    "demo:build": "npm run build -w @dragonboat/demo-web"
+  }
+}

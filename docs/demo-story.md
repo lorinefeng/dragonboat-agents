@@ -12,7 +12,11 @@ Codex steers. Claude Code rows. DragonBoat records the race.
 
 The demo starts with a newly created minimal full-stack web app.
 
-The exact framework is not decided in this document. The demo app should be small, local, easy to run, and capable of showing meaningful frontend, backend, and QA/Ops work.
+The current mock app lives in `apps/demo-web`.
+
+It uses a small TypeScript stack: Vite + React for the command board, Hono for the local API, and Vitest for backend, frontend, and client-to-API contract tests.
+
+The app should stay small, local, easy to run, and capable of showing meaningful frontend, backend, and QA/Ops work.
 
 ## Crew
 
@@ -38,6 +42,8 @@ All Claude Code rowers may use the same local Claude Code configuration. Their i
 11. Each rower submits an evidence bundle.
 12. Codex reviews all evidence.
 13. DragonBoat desktop replays the run.
+
+The current mock demonstrates the middle of that arc manually: a command board loads a crew run, records a backend-to-frontend contract message, updates task status, and marks the evidence queue as passed.
 
 ## Suggested Task Shape
 
