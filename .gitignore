@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+coverage/
+target/
+
+# DragonBoat local runtime artifacts
+.dragonboat/
+.dragonboat-runs/
+.dragonboat-worktrees/
+
+# Environment
+.env
+.env.*
+!.env.example
