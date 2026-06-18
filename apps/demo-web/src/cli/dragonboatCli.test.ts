@@ -3619,32 +3619,38 @@ describe("dragonboat CLI", () => {
   });
 
   it("prints an actionable error when the DragonBoat API is not reachable", async () => {
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "dragonboat-api-unreachable-"));
     let stderr = "";
-    const exitCode = await runDragonBoatCli(["steer"], {
-      cwd: () => "/Users/karpsie/GragonBoat/test_demo",
-      env: {
-        DRAGONBOAT_API_URL: "http://127.0.0.1:8787"
-      },
-      fetcher: vi.fn(async () => {
-        throw new TypeError("fetch failed");
-      }),
-      spawnForeground: vi.fn(async () => 0),
-      stderr: {
-        write(chunk) {
-          stderr += String(chunk);
-          return true;
-        }
-      },
-      stdout: {
-        write() {
-          return true;
-        }
-      }
-    });
 
-    expect(exitCode).toBe(1);
-    expect(stderr).toContain("DragonBoat API is not reachable at http://127.0.0.1:8787");
-    expect(stderr).toContain("npm run demo:dev");
+    try {
+      const exitCode = await runDragonBoatCli(["steer"], {
+        cwd: () => workspaceRoot,
+        env: {
+          DRAGONBOAT_API_URL: "http://127.0.0.1:8787"
+        },
+        fetcher: vi.fn(async () => {
+          throw new TypeError("fetch failed");
+        }),
+        spawnForeground: vi.fn(async () => 0),
+        stderr: {
+          write(chunk) {
+            stderr += String(chunk);
+            return true;
+          }
+        },
+        stdout: {
+          write() {
+            return true;
+          }
+        }
+      });
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("DragonBoat API is not reachable at http://127.0.0.1:8787");
+      expect(stderr).toContain("npm run demo:dev");
+    } finally {
+      rmSync(workspaceRoot, { force: true, recursive: true });
+    }
   });
 
   it("emits a Codex Stop-hook continuation from local run events without using the API", async () => {
