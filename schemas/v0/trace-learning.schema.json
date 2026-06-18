@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/trace-learning.schema.json",
+  "title": "DragonBoat Trace Learning Report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["generatedAt", "minimumAttempts", "matrix", "learned"],
+  "properties": {
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "minimumAttempts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "learned": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["entityId", "recommendation", "successRate", "totalAttempts", "confidence", "signal"],
+        "properties": {
+          "entityId": { "type": "string" },
+          "recommendation": {
+            "enum": ["avoid", "prefer", "probe_more"]
+          },
+          "successRate": { "type": "number" },
+          "totalAttempts": { "type": "integer" },
+          "confidence": { "type": "number" },
+          "signal": { "type": "string" }
+        }
+      }
+    }
+  }
+}

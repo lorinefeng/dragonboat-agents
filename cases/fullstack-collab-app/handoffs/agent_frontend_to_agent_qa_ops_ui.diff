@@ -1,0 +1,15 @@
+diff --git a/src/client/App.test.tsx b/src/client/App.test.tsx
+new file mode 100644
+--- /dev/null
++++ b/src/client/App.test.tsx
+@@
++it("registers a user, opens the kanban board, and persists card reorder", async () => {
++  await user.click(screen.getByRole("button", { name: "Create account" }));
++  await user.click(screen.getByRole("button", { name: "Move API contract to Doing" }));
++  expect(screen.getByRole("region", { name: "Doing" })).toHaveTextContent("API contract");
++});
+
+QA/Ops handoff:
+
+Please verify registration, board load, and drag-sort persistence using the user path above.
+

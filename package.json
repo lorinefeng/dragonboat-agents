@@ -1,15 +1,80 @@
 {
   "name": "dragonboat-crew",
-  "version": "0.0.0-private",
-  "private": true,
+  "version": "0.1.0",
+  "description": "DragonBoat is a local-first multi-agent coordination layer for Codex and Claude Code crews.",
+  "homepage": "https://github.com/lorinefeng/dragonboat-crew#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lorinefeng/dragonboat-crew.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lorinefeng/dragonboat-crew/issues"
+  },
+  "keywords": [
+    "multi-agent",
+    "codex",
+    "claude-code",
+    "agentic-coding",
+    "local-first"
+  ],
+  "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "dragonboat": "./bin/dragonboat.mjs",
+    "create-dragonboat": "./bin/create-dragonboat.mjs"
+  },
+  "files": [
+    "bin",
+    "apps/demo-web/index.html",
+    "apps/demo-web/package.json",
+    "apps/demo-web/public",
+    "apps/demo-web/src",
+    "apps/demo-web/tsconfig.json",
+    "apps/demo-web/vite.config.ts",
+    "docs",
+    "!docs/superpowers",
+    "!docs/agent_team_feature_expansion_addendum.md",
+    "examples",
+    "schemas",
+    "!**/*.test.ts",
+    "!**/*.test.tsx",
+    "!apps/demo-web/src/test",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hono/node-server": "^1.19.6",
+    "@remotion/cli": "^4.0.462",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^5.1.1",
+    "@xterm/xterm": "^6.0.0",
+    "@xyflow/react": "^12.10.2",
+    "hono": "^4.10.6",
+    "lucide-react": "^0.554.0",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "remotion": "^4.0.462",
+    "tsx": "^4.20.6",
+    "vite": "^7.2.4",
+    "ws": "^8.20.1",
+    "zod": "^4.3.6"
+  },
   "workspaces": [
     "apps/*",
+    "cases/*",
     "packages/*"
   ],
   "scripts": {
+    "build": "npm run demo:build",
     "demo:dev": "npm run dev -w @dragonboat/demo-web",
     "demo:test": "npm test -w @dragonboat/demo-web",
-    "demo:build": "npm run build -w @dragonboat/demo-web"
+    "demo:build": "npm run build -w @dragonboat/demo-web",
+    "postinstall": "node -e \"console.log('DragonBoat installed. Run: dragonboat doctor')\"",
+    "test": "npm run demo:test"
   }
 }

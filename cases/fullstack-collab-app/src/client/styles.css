@@ -1,0 +1,164 @@
+:root {
+  color: #11181c;
+  background: #eef1ec;
+  font-family: "Avenir Next", "DIN Alternate", "Gill Sans", ui-sans-serif, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(17, 24, 28, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 28, 0.05) 1px, transparent 1px),
+    #f8f6ed;
+  background-size: 32px 32px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.case-shell {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 36px 0;
+}
+
+.auth-panel {
+  display: grid;
+  gap: 14px;
+  width: min(440px, 100%);
+  margin: 10vh auto 0;
+  border: 1px solid #c8d1ca;
+  border-radius: 8px;
+  background: #fffdf6;
+  box-shadow: 0 24px 60px rgba(17, 24, 28, 0.12);
+  padding: 28px;
+}
+
+.auth-panel p,
+.case-header p {
+  margin: 0;
+  color: #d94d36;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.auth-panel h1,
+.case-header h1 {
+  margin: 0;
+  font-size: 42px;
+  line-height: 1;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: #65706a;
+  font-weight: 800;
+}
+
+input {
+  min-height: 44px;
+  border: 1px solid #c8d1ca;
+  border-radius: 6px;
+  padding: 0 12px;
+}
+
+button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: #101517;
+  color: #fffdf6;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.error {
+  color: #9f2f21;
+}
+
+.case-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.case-header span {
+  border: 1px solid #c8d1ca;
+  border-radius: 6px;
+  background: #fffdf6;
+  color: #65706a;
+  font-weight: 900;
+  padding: 10px 12px;
+}
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kanban-list {
+  min-height: 420px;
+  border: 1px solid #c8d1ca;
+  border-radius: 8px;
+  background: rgba(255, 253, 246, 0.9);
+  padding: 14px;
+}
+
+.list-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.list-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.list-heading span {
+  color: #0c8f86;
+  font-weight: 900;
+}
+
+.card-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.work-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d9dfda;
+  border-radius: 8px;
+  background: #fffef8;
+  padding: 14px;
+}
+
+.work-card button {
+  background: #0c8f86;
+}
+
+@media (max-width: 760px) {
+  .case-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="UI QA DragonBoat command deck preview">
+  <rect width="1200" height="720" fill="#eef4ef"/>
+  <path d="M0 80h1200M0 160h1200M0 240h1200M0 320h1200M0 400h1200M0 480h1200M0 560h1200M0 640h1200M80 0v720M160 0v720M240 0v720M320 0v720M400 0v720M480 0v720M560 0v720M640 0v720M720 0v720M800 0v720M880 0v720M960 0v720M1040 0v720M1120 0v720" stroke="#d9e4dd" stroke-width="1"/>
+  <text x="56" y="76" font-family="Arial, sans-serif" font-weight="800" font-size="24" fill="#cf442f">DRAGONBOAT</text>
+  <text x="56" y="124" font-family="Arial, sans-serif" font-weight="800" font-size="44" fill="#111d20">UI QA</text>
+  <rect x="56" y="166" width="512" height="492" rx="18" fill="#fffdf7" stroke="#a9bbb2"/>
+  <text x="92" y="216" font-family="Arial, sans-serif" font-weight="800" font-size="26" fill="#132023">Visual Rower</text>
+  <rect x="118" y="260" width="390" height="236" rx="16" fill="#f9faf4" stroke="#cfd8d2"/>
+  <rect x="142" y="286" width="342" height="54" rx="10" fill="#10221f"/>
+  <text x="164" y="321" font-family="Arial, sans-serif" font-weight="800" font-size="22" fill="#fffaf1">Local page screenshot</text>
+  <rect x="142" y="370" width="150" height="94" rx="12" fill="#e9f6f3"/>
+  <text x="164" y="414" font-family="Arial, sans-serif" font-size="18" fill="#0e514b">desktop</text>
+  <rect x="334" y="370" width="102" height="94" rx="12" fill="#fff4e4"/>
+  <text x="354" y="414" font-family="Arial, sans-serif" font-size="18" fill="#704313">mobile</text>
+  <text x="118" y="548" font-family="Arial, sans-serif" font-size="19" fill="#263234">route: kimi-k2.6 / max</text>
+  <text x="118" y="586" font-family="Arial, sans-serif" font-size="19" fill="#263234">browser doctor: passed</text>
+  <rect x="620" y="166" width="526" height="232" rx="18" fill="#fffdf7" stroke="#a9bbb2"/>
+  <text x="654" y="216" font-family="Arial, sans-serif" font-weight="800" font-size="26" fill="#132023">Agent Output</text>
+  <text x="654" y="262" font-family="Arial, sans-serif" font-size="19" fill="#263234">Readable summary first.</text>
+  <text x="654" y="300" font-family="Arial, sans-serif" font-size="19" fill="#263234">Raw terminal stays behind debug.</text>
+  <rect x="654" y="334" width="420" height="38" rx="10" fill="#e9f6f3"/>
+  <text x="676" y="359" font-family="Arial, sans-serif" font-size="16" fill="#0e514b">Top issue: CTA overlaps at 375px</text>
+  <rect x="620" y="430" width="526" height="228" rx="18" fill="#fffdf7" stroke="#a9bbb2"/>
+  <text x="654" y="480" font-family="Arial, sans-serif" font-weight="800" font-size="26" fill="#132023">Evidence</text>
+  <text x="654" y="526" font-family="Arial, sans-serif" font-size="18" fill="#263234">desktop screenshot: attached</text>
+  <text x="654" y="566" font-family="Arial, sans-serif" font-size="18" fill="#263234">mobile screenshot: attached</text>
+  <text x="654" y="606" font-family="Arial, sans-serif" font-size="18" fill="#263234">visual findings: reviewable</text>
+</svg>

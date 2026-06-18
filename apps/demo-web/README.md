@@ -1,57 +1,97 @@
 # DragonBoat Demo Web App
 
-This app is the first practice slice for DragonBoat v0.1.
+This package contains the local DragonBoat command deck: a Vite/React UI plus a Hono API used by the DragonBoat CLI.
 
-It is intentionally small: a full-stack command board that proves the basic crew-loop shape before the real DragonBoat runtime exists.
+It is no longer just a static demo board. In v0.1 it is the local monitoring surface for a foreground Codex steerer and dynamically controlled Claude Code rowers.
 
-## What It Demonstrates
+## Current Role
 
-- Codex appears as the steerer.
-- Three Claude Code rowers appear as frontend, backend, and QA/Ops workers.
-- The frontend loads a run snapshot from a Hono API.
-- The UI can record a backend-to-frontend contract handoff.
-- The API updates task status, mailbox timeline, and evidence state.
-- The API exposes an ordered local event log and an SSE endpoint.
-- The UI shows an agent console and event stream for live cockpit monitoring.
-- A simulated crew run button demonstrates the intended realtime flow before real Codex/Claude subprocesses are attached.
-- A real Claude worker button invokes the local `claude` CLI with `--print`, records stdout/stderr as `command.output`, and submits `evidence.submitted`.
-- Tests cover backend behavior, frontend behavior, and the client-to-API contract.
+The command deck is responsible for:
 
-## Commands
+- showing the current run and active crew wave
+- rendering the Codex steerer and Claude rowers as a React Flow crew graph
+- showing Agents group chat messages from the local mailbox ledger
+- showing readable agent output before raw terminal/debug output
+- projecting evidence, claim, workflow, and event data from `.dragonboat/runs/<run_id>/`
+- hosting local API endpoints used by `dragonboat steer`, `dragonboat rower start`, `dragonboat message send`, `dragonboat evidence submit`, and related commands
+
+The browser does not create a foreground Codex session by itself. Users start the Web deck first, then launch the native Codex CLI from the project terminal.
+
+## Run Locally
 
 From the repository root:
 
 ```bash
 npm run demo:dev
-npm run demo:test
-npm run demo:build
 ```
 
-The dev server starts:
+Default local URLs:
 
-- frontend: `http://127.0.0.1:5173/`
+- Web: `http://127.0.0.1:5173/`
 - API: `http://127.0.0.1:8787`
 
-The real worker smoke path uses the user's existing Claude Code CLI setup. The API accepts a minimal structured task packet:
+The product CLI wraps this with a friendlier entrypoint:
 
 ```bash
-curl -X POST http://127.0.0.1:8787/api/worker-run \
-  -H 'content-type: application/json' \
-  -d '{"prompt":"Report a one-line DragonBoat worker heartbeat."}'
+dragonboat deck --open
+
+# In a second terminal, inside the project to steer:
+dragonboat steer --open
 ```
 
-DragonBoat passes `prompt` to `claude --print ... <prompt>`. It does not parse free-form Codex prose in this slice; the intended next step is for Codex to emit a structured task packet that DragonBoat can validate.
-
-Override the binary or worker cwd when needed:
+When default ports are busy, pass explicit ports:
 
 ```bash
-DRAGONBOAT_CLAUDE_BIN=/path/to/claude DRAGONBOAT_WORKER_CWD=/path/to/worktree npm run demo:dev
+dragonboat deck --workspace /path/to/project --api-port 18787 --web-port 15173 --open
 ```
 
-## Why This Came Before The Runtime
+## No-Token Smoke Run
 
-The implementation plan starts with schemas and core runtime primitives.
+To verify that the Web deck can project a local DragonBoat run without spending provider tokens:
 
-For this slice, we intentionally started with a runnable full-stack mock because DragonBoat's core value needs a visible workflow: crew, tasks, mailbox, evidence, and acceptance flow.
+```bash
+dragonboat smoke run --workspace /path/to/project --open
+dragonboat acceptance smoke --latest
+```
 
-This does not replace the plan. It gives the plan a concrete target to serve.
+If the deck was already open before the smoke run was created, reconcile it into the live API:
+
+```bash
+dragonboat run reconcile --workspace /path/to/project --run <run_id>
+```
+
+The expected visible surfaces are:
+
+- one Codex steerer node
+- one stopped release-smoke Claude rower
+- one `intent_confirmed` Agents group chat message
+- one passed evidence item
+- readable agent output for the smoke rower
+
+## Tests And Build
+
+From the repository root:
+
+```bash
+npm run demo:test
+npm run demo:build
+git diff --check
+```
+
+Targeted package commands:
+
+```bash
+npm test -w @dragonboat/demo-web
+npm run build -w @dragonboat/demo-web
+```
+
+## Architecture Notes
+
+- `src/server/demoApi.ts` defines the local Hono API.
+- `src/server/sessionStore.ts` manages `.dragonboat/runs/<run_id>/` session state and can import CLI-created runs while the API is already running.
+- `src/server/demoEngine.ts` derives the command-deck snapshot from local events.
+- `src/cli/dragonboatCli.ts` implements the product CLI used by the Web deck, foreground Codex steerer, and Claude rower lifecycle.
+- `src/App.tsx` renders the current Web command deck.
+- `src/shared/*` contains provider-neutral contracts for events, routing, evidence, delegation economics, workflows, claims, release readiness, and rower output projection.
+
+Keep this app local-first and auditable. Raw events, terminal logs, and worktree artifacts are local run evidence; the UI should make them understandable without hiding the underlying ledger.

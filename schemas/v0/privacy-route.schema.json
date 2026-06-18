@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/privacy-route.schema.json",
+  "title": "DragonBoat Privacy Route Assessment",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["decision", "provider", "files", "reasons", "secretFindings"],
+  "properties": {
+    "decision": {
+      "enum": ["blocked", "cloud_allowed", "cloud_redacted", "local_only"]
+    },
+    "provider": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sensitivity"],
+        "properties": {
+          "path": { "type": "string" },
+          "sensitivity": {
+            "enum": ["cloud_allowed", "local_only", "secret_detected", "unknown"]
+          },
+          "redactedContent": { "type": "string" }
+        }
+      }
+    },
+    "reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "secretFindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "path", "preview", "start", "end"],
+        "properties": {
+          "kind": { "type": "string" },
+          "path": { "type": "string" },
+          "preview": { "type": "string" },
+          "start": { "type": "integer" },
+          "end": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

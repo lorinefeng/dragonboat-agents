@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/evidence-gate.schema.json",
+  "title": "DragonBoat Evidence Gate Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agentId", "checks", "reviewable", "status", "taskId", "taskType"],
+  "properties": {
+    "agentId": { "type": "string" },
+    "taskId": { "type": "string" },
+    "taskType": {
+      "enum": ["general", "ui", "runtime", "backend_contract", "research", "browser_research", "workflow_claim"]
+    },
+    "status": {
+      "enum": ["reviewable", "rejected"]
+    },
+    "reviewable": { "type": "boolean" },
+    "evidenceSeq": { "type": "integer" },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "passed"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

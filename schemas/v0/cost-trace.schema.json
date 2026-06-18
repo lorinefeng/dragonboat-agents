@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/cost-trace.schema.json",
+  "title": "DragonBoat Cost Trace",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["entries", "totalEstimatedCostUsd", "totalTokens", "wastedEstimatedCostUsd"],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["agentId", "estimatedCostUsd", "eventId", "status", "tokenCount"],
+        "properties": {
+          "agentId": { "type": "string" },
+          "estimatedCostUsd": { "type": "number", "minimum": 0 },
+          "eventId": { "type": "string" },
+          "model": { "type": "string" },
+          "reason": { "type": "string" },
+          "status": { "enum": ["accepted", "active", "blocked", "wasted"] },
+          "tokenCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "totalEstimatedCostUsd": { "type": "number", "minimum": 0 },
+    "totalTokens": { "type": "integer", "minimum": 0 },
+    "wastedEstimatedCostUsd": { "type": "number", "minimum": 0 }
+  }
+}

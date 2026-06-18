@@ -1,0 +1,9 @@
+{
+  "events": [
+    { "type": "run.created", "actor": "agent_codex", "seq": 1 },
+    { "type": "delegation.fit.assessed", "actor": "agent_codex", "seq": 2, "payload": { "decision": "crew_candidate" } },
+    { "type": "crew.member.registered", "actor": "agent_backend", "seq": 3 },
+    { "type": "mailbox.message.sent", "actor": "agent_backend", "seq": 4, "payload": { "type": "contract", "to": "agent_frontend" } },
+    { "type": "evidence.submitted", "actor": "agent_qa_ops", "seq": 5, "payload": { "taskId": "task_qa_ops" } }
+  ]
+}

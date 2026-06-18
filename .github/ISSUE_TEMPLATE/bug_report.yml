@@ -1,0 +1,83 @@
+name: Bug report
+description: Report a reproducible DragonBoat failure.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping harden DragonBoat. Please remove private prompts, credentials, customer data, and raw transcripts before submitting.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - init / bootstrap kit
+        - command deck
+        - Codex steerer
+        - Claude Code rower
+        - mailbox / group chat
+        - evidence gate / claims
+        - model routing
+        - browser / visual rower
+        - replay / local ledger
+        - documentation
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the user-visible failure.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include commands, workspace path shape, and whether `dragonboat doctor` passes.
+      placeholder: |
+        1. cd my-project
+        2. dragonboat init
+        3. dragonboat deck --open
+        4. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Paste sanitized command output, not private run logs.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: DragonBoat version or commit
+      placeholder: "0.1.0 / git sha"
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, Codex CLI version, Claude Code version, browser if relevant.
+      placeholder: |
+        macOS:
+        node:
+        codex:
+        claude:
+        browser:
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed private prompts, credentials, `.env` values, customer data, and raw transcripts.
+          required: true

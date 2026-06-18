@@ -15,10 +15,17 @@ build/
 coverage/
 target/
 
+# Internal planning and launch research notes
+docs/agent_team_feature_expansion_addendum.md
+
 # DragonBoat local runtime artifacts
+.codex/
+.claude/
 .dragonboat/
 .dragonboat-runs/
 .dragonboat-worktrees/
+.playwright-cli/
+.superpowers/
 .worktrees/
 
 # Environment

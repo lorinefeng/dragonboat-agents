@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/marketplace-pack.schema.json",
+  "title": "DragonBoat Marketplace Pack",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "name", "kind", "source", "version", "capabilities"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "kind": {
+      "enum": ["adapter", "eval_suite", "role_pack", "tool_gateway", "workflow_pack"]
+    },
+    "source": {
+      "enum": ["community", "core", "local"]
+    },
+    "version": { "type": "string" },
+    "description": { "type": "string" },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

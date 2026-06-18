@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/budget-route.schema.json",
+  "title": "DragonBoat Budget-Aware Route Decision",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["estimatedCostUsd", "rejected", "status"],
+  "properties": {
+    "estimatedCostUsd": { "type": "number", "minimum": 0 },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["estimatedCostUsd", "model", "provider", "reasons", "subscriptionId"],
+        "properties": {
+          "estimatedCostUsd": { "type": "number", "minimum": 0 },
+          "model": { "type": "string" },
+          "provider": { "type": "string" },
+          "reasons": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "subscriptionId": { "type": "string" }
+        }
+      }
+    },
+    "selected": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["capabilities", "estimatedQualityRisk", "model", "provider", "subscriptionId"],
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "effort": { "type": "string" },
+        "estimatedQualityRisk": { "type": "number", "minimum": 0 },
+        "model": { "type": "string" },
+        "provider": { "type": "string" },
+        "subscriptionId": { "type": "string" }
+      }
+    },
+    "status": {
+      "enum": ["blocked", "human_approval_required", "selected"]
+    },
+    "subscriptionId": { "type": "string" }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/capability-matrix.schema.json",
+  "title": "DragonBoat Capability Matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agents", "models"],
+  "properties": {
+    "agents": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/agentSkillCard" }
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/capabilityProfile" }
+    }
+  },
+  "$defs": {
+    "capabilityProfile": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["attempts", "capabilities", "failureCount", "successCount", "successRate"],
+      "properties": {
+        "attempts": { "type": "integer", "minimum": 0 },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "failureCount": { "type": "integer", "minimum": 0 },
+        "successCount": { "type": "integer", "minimum": 0 },
+        "successRate": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "agentSkillCard": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["agentId", "attempts", "capabilities", "failureCount", "strengths", "successCount", "successRate", "weaknesses"],
+      "properties": {
+        "agentId": { "type": "string" },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "failureCount": { "type": "integer", "minimum": 0 },
+        "strengths": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "successCount": { "type": "integer", "minimum": 0 },
+        "successRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "weaknesses": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

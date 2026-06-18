@@ -1,0 +1,291 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/context-bundle.schema.json",
+  "title": "DragonBoat Context Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "created_at",
+    "recipient",
+    "crew",
+    "mailbox",
+    "advisor_notes",
+    "evidence",
+    "recent_events",
+    "constraints",
+    "adapter_hints"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dragonboat.context_bundle.v0"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^run_[A-Za-z0-9_-]+$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recipient": {
+      "$ref": "#/$defs/crew_member"
+    },
+    "task": {
+      "$ref": "#/$defs/task"
+    },
+    "crew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "steerer",
+        "rowers"
+      ],
+      "properties": {
+        "steerer": {
+          "$ref": "#/$defs/crew_member"
+        },
+        "rowers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/crew_member"
+          }
+        }
+      }
+    },
+    "mailbox": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/mailbox_message"
+      }
+    },
+    "advisor_notes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/mailbox_message"
+      }
+    },
+    "agent_logs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agent_log"
+      },
+      "default": []
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "recent_events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/recent_event"
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "adapter_hints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_neutral",
+        "preferred_format"
+      ],
+      "properties": {
+        "provider_neutral": {
+          "const": true
+        },
+        "preferred_format": {
+          "enum": [
+            "markdown",
+            "json"
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "crew_member": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "name",
+        "platform",
+        "role",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^agent_[A-Za-z0-9_-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "owner",
+        "status",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^task_[A-Za-z0-9_-]+$"
+        },
+        "owner": {
+          "type": "string",
+          "pattern": "^agent_[A-Za-z0-9_-]+$"
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "mailbox_message": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "from",
+        "to",
+        "type",
+        "body",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "agent_log": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "agentId",
+        "createdAt",
+        "line"
+      ],
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "line": {
+          "type": "string"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "taskId",
+        "status",
+        "title",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "recent_event": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "seq",
+        "type",
+        "actor",
+        "createdAt",
+        "summary"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "type": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

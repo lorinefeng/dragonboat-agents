@@ -1,0 +1,46 @@
+name: Feature request
+description: Propose a DragonBoat capability or adapter.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What coordination pain does this solve?
+    validations:
+      required: true
+  - type: dropdown
+    id: fit
+    attributes:
+      label: Fit area
+      options:
+        - One-command setup
+        - Command deck usability
+        - Agent adapter
+        - Model routing / cost control
+        - Evidence gate / claim ledger
+        - Workflow / supervision
+        - Example / docs
+        - Security / privacy
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Keep it concrete. What should the user type or see?
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Proof path
+      description: How would we know this feature works and is worth the coordination cost?
+      placeholder: "Commands, tests, screenshots, replay events, benchmark criteria..."
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Is this better handled by the foreground steerer, an existing CLI, or documentation?

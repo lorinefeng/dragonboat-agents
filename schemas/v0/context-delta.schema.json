@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/context-delta.schema.json",
+  "title": "DragonBoat Context Delta",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "recipient",
+    "created_at",
+    "since_seq",
+    "latest_seq",
+    "new_facts",
+    "new_conflicts",
+    "pending_handoffs",
+    "open_questions",
+    "relevant_artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dragonboat.context_delta.v0"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "recipient": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "since_seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "latest_seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "new_facts": {
+      "type": "array",
+      "items": {
+        "$ref": "shared-fact-board.schema.json#/$defs/fact_item"
+      }
+    },
+    "new_conflicts": {
+      "type": "array",
+      "items": {
+        "$ref": "shared-fact-board.schema.json#/$defs/fact_item"
+      }
+    },
+    "pending_handoffs": {
+      "type": "array",
+      "items": {
+        "$ref": "shared-fact-board.schema.json#/$defs/fact_item"
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "relevant_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

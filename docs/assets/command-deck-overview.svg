@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">DragonBoat command deck overview</title>
+  <desc id="desc">A schematic preview of the DragonBoat local command deck with a crew graph, agent group chat, output, and evidence panels.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#e9f1ed"/>
+      <stop offset="0.55" stop-color="#fbf7eb"/>
+      <stop offset="1" stop-color="#d8e7e2"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="0" x2="1">
+      <stop offset="0" stop-color="#081312"/>
+      <stop offset="1" stop-color="#153b34"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#14342f" flood-opacity="0.16"/>
+    </filter>
+    <pattern id="waves" width="160" height="64" patternUnits="userSpaceOnUse">
+      <path d="M0 32 C32 8 48 56 80 32 S128 56 160 32" fill="none" stroke="#fff" stroke-opacity="0.55" stroke-width="4"/>
+    </pattern>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect width="1280" height="720" fill="url(#waves)" opacity="0.8"/>
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <rect x="34" y="34" width="178" height="652" rx="16" fill="#fffdf6" stroke="#a9beb7" filter="url(#shadow)"/>
+    <text x="58" y="78" fill="#c33a25" font-size="18" font-weight="900">DRAGONBOAT</text>
+    <text x="58" y="112" fill="#13201f" font-size="34" font-weight="900">runs</text>
+    <rect x="58" y="142" width="130" height="44" rx="8" fill="#071312"/>
+    <text x="82" y="171" fill="#fffdf6" font-size="17" font-weight="800">New session</text>
+    <rect x="58" y="216" width="130" height="82" rx="10" fill="#e5f6f2" stroke="#58b7ad"/>
+    <text x="76" y="251" fill="#075f57" font-size="17" font-weight="900">active run</text>
+    <text x="76" y="280" fill="#13201f" font-size="15" font-weight="700">running / 4</text>
+
+    <text x="252" y="82" fill="#13201f" font-size="52" font-weight="900">DragonBoat</text>
+    <text x="254" y="120" fill="#c33a25" font-size="20" font-weight="900">LOCAL-FIRST MULTI-AGENT COMMAND DECK</text>
+    <rect x="792" y="56" width="160" height="48" rx="10" fill="#fffdf6" stroke="#a9beb7"/>
+    <text x="814" y="87" fill="#13201f" font-size="17" font-weight="800">session: active</text>
+    <rect x="968" y="56" width="122" height="48" rx="10" fill="#fffdf6" stroke="#a9beb7"/>
+    <text x="994" y="87" fill="#13201f" font-size="17" font-weight="800">phase: run</text>
+    <rect x="1106" y="56" width="130" height="48" rx="10" fill="#071312"/>
+    <text x="1130" y="87" fill="#fffdf6" font-size="17" font-weight="800">steer crew</text>
+
+    <rect x="244" y="148" width="992" height="310" rx="16" fill="#fbf8ef" stroke="#9fb7af" filter="url(#shadow)"/>
+    <text x="272" y="188" fill="#70817c" font-size="17" font-weight="800">Live crew graph</text>
+    <rect x="548" y="210" width="220" height="116" rx="14" fill="url(#dark)" stroke="#0f7a70" stroke-width="2"/>
+    <text x="576" y="256" fill="#fffdf6" font-size="24" font-weight="900">Codex Steerer</text>
+    <text x="576" y="286" fill="#9fb7af" font-size="15">native foreground CLI</text>
+    <circle cx="658" cy="356" r="8" fill="#0f7a70" stroke="#fff" stroke-width="3"/>
+    <path d="M658 364 C612 420 482 410 432 378" fill="none" stroke="#0f7a70" stroke-width="4"/>
+    <path d="M658 364 C706 420 836 410 884 378" fill="none" stroke="#0f7a70" stroke-width="4"/>
+    <path d="M658 364 C650 430 650 430 650 438" fill="none" stroke="#0f7a70" stroke-width="4"/>
+    <g fill="#fffdf6" stroke="#bdd0c8">
+      <rect x="326" y="348" width="210" height="78" rx="12"/>
+      <rect x="774" y="348" width="210" height="78" rx="12"/>
+      <rect x="548" y="382" width="210" height="58" rx="12"/>
+    </g>
+    <text x="352" y="382" fill="#13201f" font-size="22" font-weight="900">Frontend rower</text>
+    <text x="800" y="382" fill="#13201f" font-size="22" font-weight="900">Backend rower</text>
+    <text x="596" y="418" fill="#13201f" font-size="22" font-weight="900">QA rower</text>
+
+    <rect x="244" y="486" width="464" height="170" rx="16" fill="#fffdf6" stroke="#a9beb7" filter="url(#shadow)"/>
+    <text x="272" y="526" fill="#13201f" font-size="26" font-weight="900">Agents group chat</text>
+    <circle cx="290" cy="562" r="20" fill="#0f7a70"/>
+    <rect x="326" y="542" width="330" height="38" rx="14" fill="#eef8f5" stroke="#9fcac3"/>
+    <text x="344" y="567" fill="#13201f" font-size="16" font-weight="700">@Backend contract ready</text>
+    <circle cx="290" cy="614" r="20" fill="#c33a25"/>
+    <rect x="326" y="594" width="290" height="38" rx="14" fill="#fff3ec" stroke="#e0b09f"/>
+    <text x="344" y="619" fill="#13201f" font-size="16" font-weight="700">@Steerer evidence submitted</text>
+
+    <rect x="736" y="486" width="250" height="170" rx="16" fill="#fffdf6" stroke="#a9beb7" filter="url(#shadow)"/>
+    <text x="764" y="526" fill="#13201f" font-size="26" font-weight="900">Evidence</text>
+    <rect x="764" y="550" width="178" height="28" rx="10" fill="#e6f6f2"/>
+    <text x="782" y="570" fill="#075f57" font-size="15" font-weight="800">reviewable claim</text>
+    <rect x="764" y="594" width="142" height="28" rx="10" fill="#fff0e8"/>
+    <text x="782" y="614" fill="#c33a25" font-size="15" font-weight="800">risk disclosed</text>
+
+    <rect x="1014" y="486" width="222" height="170" rx="16" fill="#071312" stroke="#0f7a70" filter="url(#shadow)"/>
+    <text x="1042" y="526" fill="#fffdf6" font-size="26" font-weight="900">Agent output</text>
+    <text x="1042" y="562" fill="#b7d7d2" font-size="15">Readable summaries first.</text>
+    <text x="1042" y="594" fill="#77cfc4" font-size="15">Raw logs stay in Advanced.</text>
+  </g>
+</svg>

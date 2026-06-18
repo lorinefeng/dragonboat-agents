@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/benchmark-record.schema.json",
+  "title": "DragonBoat Benchmark Record",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "benchmark_id",
+    "date",
+    "economics_verdict",
+    "mode",
+    "outcome",
+    "premium_token_ratio",
+    "rower_count",
+    "run_id",
+    "task_class",
+    "task_name",
+    "wall_clock_seconds",
+    "workspace_root"
+  ],
+  "properties": {
+    "benchmark_id": { "type": "string" },
+    "date": { "type": "string", "format": "date-time" },
+    "economics_verdict": {
+      "enum": ["crew_better", "solo_better", "inconclusive"]
+    },
+    "mode": {
+      "enum": ["single_agent", "crew", "agent_team", "dynamic_workflow"]
+    },
+    "outcome": {
+      "enum": ["pass", "partial", "fail"]
+    },
+    "premium_token_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "rower_count": { "type": "integer", "minimum": 0 },
+    "run_id": { "type": "string" },
+    "confidence_level": {
+      "enum": ["high", "medium", "low"]
+    },
+    "hard_telemetry_seconds": { "type": "number", "minimum": 0 },
+    "rower_self_estimate_seconds": { "type": "number", "minimum": 0 },
+    "serial_lower_bound_seconds": { "type": "number", "minimum": 0 },
+    "soft_estimate_seconds": { "type": "number", "minimum": 0 },
+    "task_class": { "type": "string" },
+    "task_name": { "type": "string" },
+    "team_wall_clock_seconds": { "type": "number", "minimum": 0 },
+    "wall_clock_seconds": { "type": "number", "minimum": 0 },
+    "workspace_root": { "type": "string" }
+  }
+}

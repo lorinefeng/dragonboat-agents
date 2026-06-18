@@ -1,8 +1,9 @@
-import type { DemoRun } from "./types";
+import type { DemoLanguage, DemoRun } from "./types";
 
-export function createInitialDemoRun(): DemoRun {
+export function createInitialDemoRun(language: DemoLanguage = "zh"): DemoRun {
   return {
     runId: "run_demo_web_loop",
+    language,
     phase: "ready",
     crew: {
       steerer: {
@@ -12,65 +13,11 @@ export function createInitialDemoRun(): DemoRun {
         role: "steerer",
         status: "steering"
       },
-      rowers: [
-        {
-          id: "agent_frontend",
-          name: "Frontend Rower",
-          platform: "claude_code_cli",
-          role: "frontend",
-          status: "ready"
-        },
-        {
-          id: "agent_backend",
-          name: "Backend Rower",
-          platform: "claude_code_cli",
-          role: "backend",
-          status: "ready"
-        },
-        {
-          id: "agent_qa_ops",
-          name: "QA/Ops Rower",
-          platform: "claude_code_cli",
-          role: "qa_ops",
-          status: "watching"
-        }
-      ]
+      rowers: []
     },
-    tasks: [
-      {
-        id: "task_frontend",
-        title: "Render command deck handoff",
-        owner: "agent_frontend",
-        lane: "Frontend",
-        status: "ready",
-        progress: 20
-      },
-      {
-        id: "task_backend",
-        title: "Publish API contract",
-        owner: "agent_backend",
-        lane: "Backend",
-        status: "ready",
-        progress: 35
-      },
-      {
-        id: "task_qa_ops",
-        title: "Verify demo run",
-        owner: "agent_qa_ops",
-        lane: "QA/Ops",
-        status: "watching",
-        progress: 45
-      }
-    ],
+    tasks: [],
     mailbox: [],
-    evidence: [
-      {
-        id: "evidence_seed",
-        taskId: "task_qa_ops",
-        title: "Baseline checks queued",
-        status: "pending"
-      }
-    ],
+    evidence: [],
     agentLogs: [],
     events: []
   };

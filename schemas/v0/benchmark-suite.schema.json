@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/benchmark-suite.schema.json",
+  "title": "DragonBoat Benchmark Suite Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["report", "suite"],
+  "properties": {
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confidence", "modesCompared", "reason", "recommendedMode"],
+      "properties": {
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "modesCompared": {
+          "type": "array",
+          "items": { "enum": ["single_agent", "crew", "agent_team", "dynamic_workflow"] }
+        },
+        "reason": { "type": "string" },
+        "recommendedMode": { "enum": ["single_agent", "crew", "agent_team", "dynamic_workflow", "inconclusive"] }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "records", "taskName"],
+      "properties": {
+        "id": { "type": "string" },
+        "records": {
+          "type": "array",
+          "items": { "$ref": "benchmark-record.schema.json" }
+        },
+        "taskName": { "type": "string" }
+      }
+    }
+  }
+}

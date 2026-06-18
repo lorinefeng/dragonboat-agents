@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/subscription-advice.schema.json",
+  "title": "DragonBoat Subscription Advice",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["summary", "estimatedMonthlySavingsUsd", "recommendations"],
+  "properties": {
+    "summary": { "type": "string" },
+    "estimatedMonthlySavingsUsd": { "type": "number" },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "action", "confidence", "reason"],
+        "properties": {
+          "id": { "type": "string" },
+          "action": {
+            "enum": ["add", "cancel", "downgrade", "keep", "shift_to_local", "upgrade"]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

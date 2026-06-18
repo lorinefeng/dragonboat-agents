@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Mini fullstack DragonBoat command deck preview">
+  <rect width="1200" height="720" fill="#eef4ef"/>
+  <path d="M0 72h1200M0 144h1200M0 216h1200M0 288h1200M0 360h1200M0 432h1200M0 504h1200M0 576h1200M0 648h1200M80 0v720M160 0v720M240 0v720M320 0v720M400 0v720M480 0v720M560 0v720M640 0v720M720 0v720M800 0v720M880 0v720M960 0v720M1040 0v720M1120 0v720" stroke="#d9e4dd" stroke-width="1"/>
+  <rect x="32" y="28" width="250" height="664" rx="18" fill="#fbfaf4" stroke="#a9bbb2"/>
+  <text x="58" y="74" font-family="Arial, sans-serif" font-weight="700" font-size="20" fill="#c83a24">DRAGONBOAT</text>
+  <text x="58" y="114" font-family="Arial, sans-serif" font-weight="800" font-size="34" fill="#101b1d">runs</text>
+  <rect x="58" y="150" width="190" height="52" rx="10" fill="#0e1919"/>
+  <text x="91" y="184" font-family="Arial, sans-serif" font-weight="700" font-size="20" fill="#fffaf1">New session</text>
+  <rect x="58" y="236" width="190" height="86" rx="12" fill="#e7f7f3" stroke="#78c6bd" stroke-width="2"/>
+  <text x="76" y="268" font-family="Arial, sans-serif" font-weight="700" font-size="17" fill="#0b6f68">mini-fullstack</text>
+  <text x="76" y="300" font-family="Arial, sans-serif" font-weight="700" font-size="17" fill="#263234">running / 3</text>
+  <text x="330" y="78" font-family="Arial, sans-serif" font-weight="800" font-size="24" fill="#cf442f">DRAGONBOAT DEMO</text>
+  <text x="330" y="130" font-family="Arial, sans-serif" font-weight="800" font-size="50" fill="#111d20">Command Deck</text>
+  <rect x="330" y="170" width="830" height="286" rx="18" fill="#f9faf4" stroke="#a9bbb2"/>
+  <text x="360" y="214" font-family="Arial, sans-serif" font-weight="800" font-size="26" fill="#132023">Current Crew Graph</text>
+  <path d="M745 254 C685 318 580 318 520 380" fill="none" stroke="#0f7a70" stroke-width="4"/>
+  <path d="M745 254 C820 318 908 318 980 380" fill="none" stroke="#0f7a70" stroke-width="4"/>
+  <path d="M520 380 C628 430 810 430 980 380" fill="none" stroke="#6a7774" stroke-width="3" stroke-dasharray="12 10"/>
+  <rect x="625" y="210" width="250" height="92" rx="14" fill="#10221f"/>
+  <text x="648" y="247" font-family="Arial, sans-serif" font-weight="800" font-size="24" fill="#fffaf1">Codex Steerer</text>
+  <text x="648" y="276" font-family="Arial, sans-serif" font-size="16" fill="#8cd8cf">plan + review</text>
+  <rect x="410" y="348" width="220" height="82" rx="14" fill="#fffdf7" stroke="#cfd8d2"/>
+  <text x="432" y="382" font-family="Arial, sans-serif" font-weight="800" font-size="22" fill="#132023">Backend Rower</text>
+  <text x="432" y="410" font-family="Arial, sans-serif" font-size="15" fill="#68736f">contract</text>
+  <rect x="670" y="348" width="220" height="82" rx="14" fill="#fffdf7" stroke="#cfd8d2"/>
+  <text x="692" y="382" font-family="Arial, sans-serif" font-weight="800" font-size="22" fill="#132023">Frontend Rower</text>
+  <text x="692" y="410" font-family="Arial, sans-serif" font-size="15" fill="#68736f">implementation</text>
+  <rect x="930" y="348" width="190" height="82" rx="14" fill="#fffdf7" stroke="#cfd8d2"/>
+  <text x="952" y="382" font-family="Arial, sans-serif" font-weight="800" font-size="22" fill="#132023">QA Rower</text>
+  <text x="952" y="410" font-family="Arial, sans-serif" font-size="15" fill="#68736f">evidence</text>
+  <rect x="330" y="482" width="398" height="178" rx="18" fill="#fffdf7" stroke="#a9bbb2"/>
+  <text x="360" y="526" font-family="Arial, sans-serif" font-weight="800" font-size="25" fill="#132023">Agents Group Chat</text>
+  <circle cx="380" cy="570" r="22" fill="#7bd3ca"/>
+  <rect x="418" y="548" width="260" height="44" rx="12" fill="#e9f6f3"/>
+  <text x="436" y="576" font-family="Arial, sans-serif" font-size="16" fill="#0e514b">@Frontend contract ready</text>
+  <circle cx="380" cy="626" r="22" fill="#f3b56a"/>
+  <rect x="418" y="604" width="244" height="44" rx="12" fill="#fff4e4"/>
+  <text x="436" y="632" font-family="Arial, sans-serif" font-size="16" fill="#704313">@QA UI done, verify</text>
+  <rect x="762" y="482" width="398" height="178" rx="18" fill="#fffdf7" stroke="#a9bbb2"/>
+  <text x="792" y="526" font-family="Arial, sans-serif" font-weight="800" font-size="25" fill="#132023">Evidence</text>
+  <text x="792" y="570" font-family="Arial, sans-serif" font-size="18" fill="#263234">backend contract: passed</text>
+  <text x="792" y="608" font-family="Arial, sans-serif" font-size="18" fill="#263234">frontend tests: passed</text>
+  <text x="792" y="646" font-family="Arial, sans-serif" font-size="18" fill="#263234">QA review: accepted</text>
+</svg>

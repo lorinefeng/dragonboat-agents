@@ -1,0 +1,33 @@
+diff --git a/src/domain/appState.ts b/src/domain/appState.ts
+new file mode 100644
+--- /dev/null
++++ b/src/domain/appState.ts
+@@
++export function createCollabStore() {
++  return {
++    register(email: string, password: string) { /* returns {token,user} */ },
++    login(email: string, password: string) { /* returns {token,user} */ },
++    listBoards(token: string) { /* returns boards with lists and cards */ },
++    reorderCards(token: string, boardId: string, input: {
++      sourceListId: string;
++      targetListId: string;
++      orderedCardIds: string[];
++    }) { /* persists card order */ }
++  };
++}
+diff --git a/src/server/api.ts b/src/server/api.ts
+new file mode 100644
+--- /dev/null
++++ b/src/server/api.ts
+@@
++export function createCollabApi() {
++  return {
++    register,
++    login,
++    listBoards,
++    getBoard,
++    reorderCards,
++    reorderLists
++  };
++}
+

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/compute-placement.schema.json",
+  "title": "DragonBoat Compute Placement Plan",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["status", "localOnly", "rejected", "estimatedCostUsd"],
+  "properties": {
+    "status": {
+      "enum": ["blocked", "human_approval_required", "selected"]
+    },
+    "localOnly": {
+      "type": "boolean"
+    },
+    "estimatedCostUsd": {
+      "type": "number"
+    },
+    "selected": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "kind", "trustZone"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "trustZone": { "type": "string" }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "kind", "reasons"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string" },
+          "estimatedCostUsd": { "type": "number" },
+          "reasons": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

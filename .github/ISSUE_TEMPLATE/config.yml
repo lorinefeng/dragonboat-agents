@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: DragonBoat discussions
+    url: https://github.com/lorinefeng/dragonboat-crew/discussions
+    about: Use discussions for ideas, roadmap questions, examples, and adapter research that are not actionable bugs.

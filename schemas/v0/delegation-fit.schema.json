@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/delegation-fit.schema.json",
+  "title": "DragonBoat Delegation Fit Assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "decision", "fit_score", "hard_blockers", "scores"],
+  "properties": {
+    "schema_version": {
+      "const": "dragonboat.delegation_fit.v0"
+    },
+    "decision": {
+      "enum": ["crew_strong_fit", "crew_candidate", "single_agent_default"]
+    },
+    "fit_score": {
+      "type": "integer",
+      "minimum": -6,
+      "maximum": 15
+    },
+    "hard_blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context_amortization",
+        "parallel_split",
+        "interface_stability",
+        "acceptance_executability",
+        "low_cost_rower_fit",
+        "shared_state_penalty",
+        "runtime_drift_penalty"
+      ],
+      "properties": {
+        "context_amortization": { "$ref": "#/$defs/score" },
+        "parallel_split": { "$ref": "#/$defs/score" },
+        "interface_stability": { "$ref": "#/$defs/score" },
+        "acceptance_executability": { "$ref": "#/$defs/score" },
+        "low_cost_rower_fit": { "$ref": "#/$defs/score" },
+        "shared_state_penalty": { "$ref": "#/$defs/score" },
+        "runtime_drift_penalty": { "$ref": "#/$defs/score" }
+      }
+    }
+  },
+  "$defs": {
+    "score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    }
+  }
+}

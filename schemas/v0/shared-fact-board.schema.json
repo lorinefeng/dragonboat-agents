@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/shared-fact-board.schema.json",
+  "title": "DragonBoat Shared Fact Board",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "created_at",
+    "confirmed_facts",
+    "unverified_claims",
+    "conflicting_claims",
+    "missing_evidence",
+    "pending_handoffs",
+    "accepted_conclusions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dragonboat.shared_fact_board.v0"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "confirmed_facts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact_item"
+      }
+    },
+    "unverified_claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact_item"
+      }
+    },
+    "conflicting_claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact_item"
+      }
+    },
+    "missing_evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact_item"
+      }
+    },
+    "pending_handoffs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact_item"
+      }
+    },
+    "accepted_conclusions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact_item"
+      }
+    }
+  },
+  "$defs": {
+    "fact_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "seq",
+        "createdAt",
+        "agentId",
+        "status",
+        "text",
+        "sources"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "seq": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "agentId": { "type": "string" },
+        "taskId": { "type": "string" },
+        "claimId": { "type": "string" },
+        "handoffId": { "type": "string" },
+        "recipient": { "type": "string" },
+        "confidence": { "type": "string" },
+        "status": {
+          "enum": [
+            "accepted",
+            "conflicted",
+            "needs_human",
+            "pending",
+            "refuted",
+            "rejected",
+            "reviewable",
+            "supported",
+            "unverified"
+          ]
+        },
+        "text": { "type": "string" },
+        "sources": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "openQuestions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "requiredAction": { "type": "string" },
+        "verifierAgent": { "type": "string" }
+      }
+    }
+  }
+}

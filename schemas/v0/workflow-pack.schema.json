@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonboat.dev/schemas/v0/workflow-pack.schema.json",
+  "title": "DragonBoat Workflow Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["defaultPhases", "description", "id", "qualityPatterns", "roles", "title"],
+  "properties": {
+    "defaultPhases": {
+      "type": "array",
+      "items": { "enum": ["discover", "shard", "fanout", "cross_check", "synthesize", "verify"] }
+    },
+    "description": { "type": "string" },
+    "id": { "type": "string" },
+    "qualityPatterns": {
+      "type": "array",
+      "items": { "enum": ["map_reduce", "refuter", "claim_vote", "independent_verify", "fix_loop"] }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capabilities", "id", "modelHint", "title"],
+        "properties": {
+          "capabilities": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "id": { "type": "string" },
+          "modelHint": { "enum": ["low_cost_text", "premium_reasoning", "vision"] },
+          "title": { "type": "string" }
+        }
+      }
+    },
+    "title": { "type": "string" }
+  }
+}

@@ -1,0 +1,18 @@
+diff --git a/src/client/App.tsx b/src/client/App.tsx
+new file mode 100644
+--- /dev/null
++++ b/src/client/App.tsx
+@@
++async function moveApiContractToDoing() {
++  const nextBoard = await api.reorderCards(token, board.id, {
++    orderedCardIds: [card.id, ...targetList.cards.map((targetCard) => targetCard.id)],
++    sourceListId: sourceList.id,
++    targetListId: targetList.id
++  });
++  setBoard(nextBoard);
++}
+
+Question to backend rower:
+
+Should cross-list card reorder use `{sourceListId,targetListId,orderedCardIds}` for both same-list and cross-list movement?
+

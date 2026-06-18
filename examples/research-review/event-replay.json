@@ -1,0 +1,8 @@
+{
+  "events": [
+    { "type": "agentic.mode.selected", "actor": "agent_codex", "seq": 1, "payload": { "mode": "agent_team" } },
+    { "type": "claim.submitted", "actor": "agent_product_reviewer", "seq": 2, "payload": { "claimId": "claim_value", "claim": "DragonBoat reduces premium-model reread cost." } },
+    { "type": "claim.reviewed", "actor": "agent_risk_reviewer", "seq": 3, "payload": { "claimId": "claim_value", "status": "needs_human" } },
+    { "type": "mailbox.message.sent", "actor": "agent_risk_reviewer", "seq": 4, "payload": { "type": "peer_challenge", "to": "agent_product_reviewer" } }
+  ]
+}

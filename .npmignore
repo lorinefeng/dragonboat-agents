@@ -1,0 +1,13 @@
+# Tests are useful in the repository but not required for the runtime CLI package.
+**/*.test.ts
+**/*.test.tsx
+apps/demo-web/src/test/
+
+# Internal planning and research notes are not needed by end users installing the CLI.
+.codex/
+docs/superpowers/
+docs/agent_team_feature_expansion_addendum.md
+tmp/
+
+# GitHub metadata lives in the repository, not the npm runtime package.
+.github/

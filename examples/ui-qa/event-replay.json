@@ -1,0 +1,7 @@
+{
+  "events": [
+    { "type": "browser.capability.checked", "actor": "agent_codex", "seq": 1, "payload": { "status": "passed" } },
+    { "type": "route.decision.recorded", "actor": "agent_codex", "seq": 2, "payload": { "agentId": "agent_visual_qa", "model": "kimi-k2.6", "effort": "max" } },
+    { "type": "evidence.submitted", "actor": "agent_visual_qa", "seq": 3, "payload": { "taskType": "ui", "screenshots": ["output/desktop.png", "output/mobile.png"] } }
+  ]
+}
