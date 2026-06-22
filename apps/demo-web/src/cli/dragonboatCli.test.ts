@@ -1,8 +1,6 @@
 // @vitest-environment node
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { createServer as createHttpServer } from "node:http";
-import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -14,45 +12,6 @@ function jsonResponse(body: unknown, status = 200) {
       "content-type": "application/json"
     },
     status
-  });
-}
-
-async function listenOnLoopback() {
-  const server = createServer();
-
-  await new Promise<void>((resolveListen, rejectListen) => {
-    server.once("error", rejectListen);
-    server.listen(0, "127.0.0.1", resolveListen);
-  });
-
-  return {
-    port: (server.address() as AddressInfo).port,
-    server
-  };
-}
-
-async function listenWithHttpBody(body: string) {
-  const server = createHttpServer((_request, response) => {
-    response.writeHead(200, {
-      "content-type": "text/plain"
-    });
-    response.end(body);
-  });
-
-  await new Promise<void>((resolveListen, rejectListen) => {
-    server.once("error", rejectListen);
-    server.listen(0, "127.0.0.1", resolveListen);
-  });
-
-  return {
-    port: (server.address() as AddressInfo).port,
-    server
-  };
-}
-
-async function closeServer(server: { close: (callback?: (error?: Error) => void) => unknown }) {
-  await new Promise<void>((resolveClose) => {
-    server.close(() => resolveClose());
   });
 }
 
@@ -78,6 +37,10 @@ describe("dragonboat CLI", () => {
       expect(rowerSkill).toContain("mailbox is durable");
       expect(rowerSkill).toContain("Do not wait for the recipient rower");
       expect(rowerSkill).toContain(".dragonboat/crew-lessons.md");
+      expect(rowerSkill).toContain("--current-focus");
+      expect(rowerSkill).toContain("--changed-file");
+      expect(rowerSkill).toContain("--next-action");
+      expect(rowerSkill).not.toContain("--focus \"<what you were working on>\"");
       const commands = readFileSync(join(workspaceRoot, ".dragonboat", "commands.md"), "utf8");
       expect(commands).toContain("dragonboat rower start");
       expect(commands).toContain("dragonboat handoff submit");
@@ -495,6 +458,7 @@ describe("dragonboat CLI", () => {
         ["deck", "--workspace", workspaceRoot, "--api-port", "18087", "--web-port", "15173", "--no-open"],
         {
           cwd: () => workspaceRoot,
+          portAvailable: vi.fn(async () => true),
           spawnBackground: vi.fn((command, args, options) => {
             spawns.push({
               args,
@@ -538,18 +502,16 @@ describe("dragonboat CLI", () => {
 
   it("rejects explicit deck ports occupied by non-DragonBoat services", async () => {
     const workspaceRoot = mkdtempSync(join(tmpdir(), "dragonboat-deck-port-conflict-"));
-    const busy = await listenWithHttpBody("not dragonboat");
-    const freeWeb = await listenOnLoopback();
     const spawnBackground = vi.fn();
     let stderr = "";
 
     try {
-      await closeServer(freeWeb.server);
-
       const exitCode = await runDragonBoatCli(
-        ["deck", "--workspace", workspaceRoot, "--api-port", String(busy.port), "--web-port", String(freeWeb.port), "--no-open"],
+        ["deck", "--workspace", workspaceRoot, "--api-port", "18088", "--web-port", "15174", "--no-open"],
         {
           cwd: () => workspaceRoot,
+          fetcher: vi.fn(async () => new Response("not dragonboat")),
+          portAvailable: vi.fn(async (port) => port === 15174),
           spawnBackground,
           stderr: {
             write(chunk) {
@@ -562,10 +524,9 @@ describe("dragonboat CLI", () => {
 
       expect(exitCode).toBe(1);
       expect(spawnBackground).not.toHaveBeenCalled();
-      expect(stderr).toContain(`DragonBoat API port ${busy.port} is already in use`);
+      expect(stderr).toContain("DragonBoat API port 18088 is already in use");
       expect(stderr).toContain("dragonboat deck --api-port <free-port>");
     } finally {
-      await closeServer(busy.server);
       rmSync(workspaceRoot, {
         force: true,
         recursive: true
@@ -4811,6 +4772,125 @@ describe("dragonboat CLI", () => {
       expect(events.find((event) => event.type === "claim.submitted")?.payload.claim).toContain("mailbox events");
       expect(events.find((event) => event.type === "claim.submitted")?.payload.sources).toEqual(
         expect.arrayContaining(["docs/dynamic-workflow-readiness.md", evidenceFile])
+      );
+    } finally {
+      rmSync(workspaceRoot, {
+        force: true,
+        recursive: true
+      });
+    }
+  });
+
+  it("attaches to a rower in assist mode and sends user input through the API", async () => {
+    const requests: Array<{ body?: unknown; method: string; url: string }> = [];
+    let stdout = "";
+    const exitCode = await runDragonBoatCli(
+      ["rower", "attach", "--run", "run_demo", "--agent", "agent_backend", "--mode", "assist", "--text", "请补充这个约束", "--end"],
+      {
+        env: {
+          DRAGONBOAT_API_URL: "http://dragonboat.test"
+        },
+        fetcher: async (input, init) => {
+          const url = String(input);
+          requests.push({
+            body: init?.body ? JSON.parse(String(init.body)) : undefined,
+            method: init?.method ?? "GET",
+            url
+          });
+
+          if (url.endsWith("/attach")) {
+            return jsonResponse(
+              {
+                buffer: ["hello\n"],
+                session: {
+                  id: "attach_1",
+                  mode: "assist"
+                }
+              },
+              201
+            );
+          }
+
+          return jsonResponse({ ok: true });
+        },
+        stdout: {
+          write(chunk) {
+            stdout += String(chunk);
+            return true;
+          }
+        }
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("已进入 agent_backend");
+    expect(requests.map((request) => request.url)).toEqual([
+      "http://dragonboat.test/api/sessions/run_demo/rowers/agent_backend/attach",
+      "http://dragonboat.test/api/sessions/run_demo/rowers/agent_backend/attach/input",
+      "http://dragonboat.test/api/sessions/run_demo/rowers/agent_backend/attach/end"
+    ]);
+    expect(requests[1].body).toMatchObject({
+      sessionId: "attach_1",
+      text: "请补充这个约束\r"
+    });
+  });
+
+  it("creates and ensures a local rower state checkpoint for hooks", async () => {
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "dragonboat-cli-checkpoint-"));
+    let stdout = "";
+
+    try {
+      mkdirSync(join(workspaceRoot, ".dragonboat", "runs", "run_demo"), { recursive: true });
+      writeFileSync(
+        join(workspaceRoot, ".dragonboat", "runs", "run_demo", "events.ndjson"),
+        `${JSON.stringify({ events: [], runId: "run_demo" })}\n`
+      );
+
+      const createExit = await runDragonBoatCli(
+        [
+          "rower",
+          "checkpoint",
+          "create",
+          "--run",
+          "run_demo",
+          "--agent",
+          "agent_backend",
+          "--task",
+          "task_backend",
+          "--status",
+          "done",
+          "--summary",
+          "后端划手状态可恢复。",
+          "--current-focus",
+          "等待鼓手 review"
+        ],
+        {
+          cwd: () => workspaceRoot,
+          stdout: {
+            write(chunk) {
+              stdout += String(chunk);
+              return true;
+            }
+          }
+        }
+      );
+      const ensureExit = await runDragonBoatCli(["rower", "checkpoint", "ensure", "--run", "run_demo", "--agent", "agent_backend"], {
+        cwd: () => workspaceRoot,
+        stdin: async () => "{}",
+        stdout: {
+          write(chunk) {
+            stdout += String(chunk);
+            return true;
+          }
+        }
+      });
+
+      expect(createExit).toBe(0);
+      expect(ensureExit).toBe(0);
+      expect(existsSync(join(workspaceRoot, ".dragonboat", "checkpoints", "agent_backend.current.json"))).toBe(true);
+      expect(stdout).toContain("划手状态检查点已创建");
+      expect(readFileSync(join(workspaceRoot, ".dragonboat", "runs", "run_demo", "events.ndjson"), "utf8")).toContain(
+        "rower.checkpoint.validated"
       );
     } finally {
       rmSync(workspaceRoot, {

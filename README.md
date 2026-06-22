@@ -64,6 +64,98 @@ If I approve, create sealed task packets, start the rowers, monitor intent_confi
 - **证据与 claim**：记录 evidence、reviewability、支持/反驳/冲突的 claim，降低“假完成”风险。
 - **本地 run ledger**：每次运行都保存在 `.dragonboat/runs/<run_id>/`，可审计、可回放、可清理。
 
+### 直接进入划手会话
+
+DragonBoat 不只允许你旁观划手。对于由 DragonBoat 后端托管的 Claude Code 划手，你可以从任意新终端进入它的真实会话，并按需要选择三种模式：
+
+| 模式 | 命令 | 适合场景 | 输入权限 |
+| --- | --- | --- | --- |
+| 只读查看 | `--mode view` | 观察 GLM/Kimi 划手当前在做什么 | 不能输入 |
+| 协助模式 | `--mode assist` | 补充一个文件位置、业务约束或纠正信息 | 可以输入，鼓手仍可继续调度 |
+| 接管模式 | `--mode takeover` | 用户直接操作该划手处理一段独立工作 | 独占输入；鼓手注入会暂停 |
+
+先查看当前 run 中有哪些划手，以及它们的角色、状态、进入状态和最新检查点：
+
+```bash
+dragonboat rower list --latest
+```
+
+进入划手终端：
+
+```bash
+# 只读跟随实时输出
+dragonboat rower attach --agent agent_backend --mode view --latest
+
+# 与划手直接交互，同时保留鼓手的调度权
+dragonboat rower attach --agent agent_backend --mode assist --latest
+
+# 独占接管划手；接管期间 DragonBoat 不会向它注入 mailbox/config 指令
+dragonboat rower attach --agent agent_backend --mode takeover --latest
+```
+
+三种模式都使用 `Ctrl-]` 退出。协助和接管模式中的输入会写入本地事件账本。若终端异常退出后留下接管锁，可以手动释放：
+
+```bash
+dragonboat rower release --agent agent_backend --latest
+```
+
+在脚本或 CI 中也可以发送一次性协助输入，不进入持续终端：
+
+```bash
+dragonboat rower attach \
+  --agent agent_backend \
+  --mode assist \
+  --latest \
+  --text "请优先核对 src/server/api.ts 的兼容性风险" \
+  --end
+```
+
+> `attach` 仅适用于 DragonBoat 后端 PTY 托管的 Claude Code 划手。若 API 不可达或划手并非由 DragonBoat 启动，仍可读取本地 terminal log、handoff 和划手状态检查点，但不能向该 CLI 输入。
+
+### 划手状态检查点
+
+用户直接协助或接管划手后，鼓手不应该靠重读整段终端日志来猜发生了什么。每个划手可以写一份“划手状态检查点”，记录当前真实状态：任务、摘要、当前焦点、已做决策、待确认问题、变更文件、handoff、evidence、下一步、风险和时间戳。
+
+手动创建检查点：
+
+```bash
+dragonboat rower checkpoint create \
+  --agent agent_backend \
+  --latest \
+  --task task_api_contract \
+  --status running \
+  --summary "API 合同已完成，兼容性测试仍在进行" \
+  --current-focus "验证旧客户端请求" \
+  --decision "保留 v1 response 字段" \
+  --open-question "是否需要迁移脚本" \
+  --changed-file src/server/api.ts \
+  --handoff .dragonboat/handoffs/backend-contract.md \
+  --evidence .dragonboat/evidence/backend-contract.md \
+  --next-action "运行 API 回归测试" \
+  --risk "尚未验证 Windows 路径"
+```
+
+读取最新状态或查看历史：
+
+```bash
+dragonboat rower checkpoint latest --agent agent_backend --latest --format markdown
+dragonboat rower checkpoint list --agent agent_backend --latest
+```
+
+检查点同时写入两个位置：
+
+- run 历史：`.dragonboat/runs/<run_id>/checkpoints/<agent_id>/<timestamp>.json|md`
+- 工作区最新指针：`.dragonboat/checkpoints/<agent_id>.current.json|md`
+
+`dragonboat rower start` 会在划手 worktree 的 `.claude/settings.local.json` 安装项目级 Claude Code `Stop` hook。划手一轮任务结束时，hook 会运行 `rower checkpoint ensure`；没有合法检查点时会记录 `rower.checkpoint.missing` 并要求划手先补齐，存在检查点时记录 `rower.checkpoint.validated`。它不修改用户的全局 Claude Code 配置。
+
+推荐的恢复链路是：
+
+1. 用户用 `assist` 或 `takeover` 直接处理划手执行层问题。
+2. 退出前让划手生成最新检查点；Stop hook 负责兜底检查。
+3. 必要时用 `rower release` 释放接管锁。
+4. 鼓手读取 `.dragonboat/checkpoints/<agent_id>.current.md`，再决定继续调度、验收或启动下一轮任务。
+
 ### 适合什么时候使用
 
 DragonBoat 适合任务边界清晰、能够被安全拆分的场景：
@@ -263,6 +355,88 @@ The local command deck opens at `http://127.0.0.1:5173` by default. The API uses
 - **Agent output**: readable summaries first, raw terminal/debug output behind an explicit switch.
 - **Evidence and claims**: submitted evidence, reviewability checks, and claim support/refutation history for avoiding false done.
 - **Local run ledger**: every run stays in `.dragonboat/runs/<run_id>/` so you can replay, inspect, or clean it up locally.
+
+## Enter A Rower Session Directly
+
+DragonBoat lets a user enter any Claude Code rower hosted by the DragonBoat backend in three modes:
+
+| Mode | Command | Intended use | Input access |
+| --- | --- | --- | --- |
+| View | `--mode view` | Follow a GLM/Kimi rower's live work | Read-only |
+| Assist | `--mode assist` | Add context or correct an execution detail | Shared with the steerer |
+| Takeover | `--mode takeover` | Operate the rower directly for a bounded period | Exclusive; steerer injection is paused |
+
+List the rowers in the latest run first:
+
+```bash
+dragonboat rower list --latest
+```
+
+Enter a rower session:
+
+```bash
+dragonboat rower attach --agent agent_backend --mode view --latest
+dragonboat rower attach --agent agent_backend --mode assist --latest
+dragonboat rower attach --agent agent_backend --mode takeover --latest
+```
+
+Press `Ctrl-]` to leave any attached session. Assist and takeover input is recorded in the local event ledger. Release a stale takeover lock with:
+
+```bash
+dragonboat rower release --agent agent_backend --latest
+```
+
+For one-shot automation without opening an interactive terminal:
+
+```bash
+dragonboat rower attach \
+  --agent agent_backend \
+  --mode assist \
+  --latest \
+  --text "Check compatibility risks in src/server/api.ts first" \
+  --end
+```
+
+`attach` requires a Claude Code rower hosted by the DragonBoat backend PTY. If the API is unavailable or the rower was launched externally, local logs, handoffs, and checkpoints remain readable, but the CLI cannot accept input through DragonBoat.
+
+## Rower State Checkpoints
+
+A rower state checkpoint preserves the compact execution state needed after direct user intervention: task, summary, current focus, decisions, open questions, changed files, handoffs, evidence, next actions, risks, and timestamp.
+
+Create one explicitly:
+
+```bash
+dragonboat rower checkpoint create \
+  --agent agent_backend \
+  --latest \
+  --task task_api_contract \
+  --status running \
+  --summary "API contract is complete; compatibility tests are still running" \
+  --current-focus "Validate legacy client requests" \
+  --decision "Preserve the v1 response fields" \
+  --open-question "Do we need a migration script?" \
+  --changed-file src/server/api.ts \
+  --handoff .dragonboat/handoffs/backend-contract.md \
+  --evidence .dragonboat/evidence/backend-contract.md \
+  --next-action "Run the API regression suite" \
+  --risk "Windows paths have not been verified"
+```
+
+Read the latest checkpoint or list its run-local history:
+
+```bash
+dragonboat rower checkpoint latest --agent agent_backend --latest --format markdown
+dragonboat rower checkpoint list --agent agent_backend --latest
+```
+
+DragonBoat writes checkpoints to both locations:
+
+- Run history: `.dragonboat/runs/<run_id>/checkpoints/<agent_id>/<timestamp>.json|md`
+- Workspace latest pointer: `.dragonboat/checkpoints/<agent_id>.current.json|md`
+
+`dragonboat rower start` installs a project-local Claude Code `Stop` hook in the rower worktree at `.claude/settings.local.json`. The hook runs `rower checkpoint ensure` before the rower ends: missing state produces `rower.checkpoint.missing`, while a valid checkpoint produces `rower.checkpoint.validated`. User-level Claude Code settings are not modified.
+
+The intended recovery loop is: enter with assist or takeover, update the checkpoint before leaving, release the takeover lock if needed, then let the steerer read `.dragonboat/checkpoints/<agent_id>.current.md` before replanning or accepting the rower's work.
 
 ## When To Use It
 

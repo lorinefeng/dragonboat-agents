@@ -1298,6 +1298,55 @@ button {
   color: #f8d060;
 }
 
+.agent-attach-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 22px;
+  margin-top: 9px;
+  padding: 0 8px;
+  border: 1px solid rgba(12, 143, 134, 0.24);
+  border-radius: 999px;
+  background: rgba(12, 143, 134, 0.1);
+  color: var(--teal-dark);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.agent-attach-chip.attach-taken_over {
+  border-color: rgba(187, 58, 32, 0.28);
+  background: rgba(187, 58, 32, 0.12);
+  color: var(--red);
+}
+
+.agent-checkpoint-summary {
+  margin-top: 8px;
+  padding: 8px 9px;
+  border: 1px solid rgba(12, 143, 134, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 254, 248, 0.74);
+  color: var(--ink);
+}
+
+.agent-checkpoint-summary span {
+  margin: 0 0 4px;
+  color: var(--teal-dark);
+  font-size: 10px;
+}
+
+.agent-checkpoint-summary p {
+  display: -webkit-box;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .agent-cli-button {
   z-index: 4;
   display: inline-flex;
@@ -3669,6 +3718,25 @@ button {
   background: rgba(12, 22, 20, 0.92);
   border-color: rgba(138, 208, 196, 0.3);
   color: #9ad8ce;
+}
+
+:root[data-theme="dark"] .agent-checkpoint-summary {
+  border-color: rgba(138, 208, 196, 0.22);
+  background: rgba(8, 16, 15, 0.58);
+  color: #f4f0e6;
+}
+
+:root[data-theme="dark"] .agent-checkpoint-summary span,
+:root[data-theme="dark"] .agent-attach-chip {
+  color: #9ad8ce;
+}
+
+:root[data-theme="dark"] .agent-checkpoint-summary p {
+  color: #c8d5cf;
+}
+
+:root[data-theme="dark"] .agent-attach-chip.attach-taken_over {
+  color: #ff9a80;
 }
 
 :root[data-theme="dark"] .graph-agent-card:not(.graph-steerer-card) {

@@ -1048,3 +1048,30 @@ Known gaps:
 - The screenshots are static PNGs; a short GIF or MP4 walkthrough would still explain the foreground Codex + Web deck split better.
 - The release screenshot smoke is no-token and proves projection, not real provider execution or semantic quality.
 - The API/Web process lifecycle still needs a first-class stop/status command before the public release feels fully one-command managed.
+
+## 2026-06-20 — Rower Attach And Rower State Checkpoints V0
+
+DragonBoat now supports user entry into hosted Claude Code rowers without collapsing the whole crew model back into the steerer.
+
+Implemented user-facing capabilities:
+
+- `dragonboat rower list` shows active rowers, role, status, attach state, and latest `划手状态检查点` summary.
+- `dragonboat rower attach` supports three modes: read-only view, assist input, and exclusive takeover.
+- `dragonboat rower release` clears stale or completed takeover locks so the steerer can resume normal scheduling.
+- The attach API records `rower.attach.started`, `rower.attach.input_sent`, `rower.attach.ended`, `rower.attach.blocked`, and `rower.takeover.released` events.
+- Takeover mode blocks steerer, mailbox, and config injection into the rower until the user releases the lock.
+- `dragonboat rower checkpoint create|latest|list|ensure` writes a Chinese-facing rower state checkpoint into both run-local history and the workspace-level latest pointer.
+- Dynamic rower startup installs a project-local Claude Code Stop hook in the rower worktree. The hook calls `rower checkpoint ensure` and blocks task closure when no valid checkpoint exists.
+- The command deck projects each rower's attach state and latest checkpoint summary on the relationship graph.
+
+User-facing value:
+
+- A user can directly inspect, assist, or temporarily take over a lower-cost execution agent without losing DragonBoat's event ledger.
+- The steerer can recover the current execution context from a compact checkpoint instead of re-reading raw terminal logs or relying on stale handoff memory.
+- Long-running GLM/Kimi rowers have a forced closure habit: summarize current focus, decisions, open questions, files, handoffs, evidence, next actions, risks, and timestamp.
+
+Known gaps:
+
+- The v0 CLI attach flow now supports a continuous interactive terminal bridge over `/api/attach/:runId/:agentId`; terminal resizing and richer TUI fidelity remain follow-ups.
+- Checkpoints are validated for required structure, but DragonBoat does not verify every stated claim inside the checkpoint.
+- The Web deck displays the latest checkpoint summary, not the full checkpoint detail view.

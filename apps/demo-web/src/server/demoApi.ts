@@ -20,6 +20,7 @@ import { promisify } from "node:util";
 import { Hono } from "hono";
 import { createContextBundle } from "../shared/contextBundle";
 import { projectRowerOutput } from "../shared/rowerProjection";
+import { createRowerCheckpoint, type RowerCheckpointInput } from "../shared/rowerCheckpoint";
 import {
   createHandoffId,
   normalizeHandoffAckStatus,
@@ -48,6 +49,8 @@ import { CrewPtyManager } from "./crewPtyManager";
 import { createDefaultClaudeWorkerTask, DemoEngine, toSseEvent, type ClaudeWorkerTask } from "./demoEngine";
 import { startFullstackCliRun, type CrewPtyAdapter, type StartFullstackCliRunInput } from "./realCliCrewRunner";
 import { createRemotionReplayExporter, type ReplayExporter } from "./replayExporter";
+import { RowerAttachRegistry, type RowerAttachMode } from "./rowerAttachRegistry";
+import { listRowerCheckpoints, readLatestRowerCheckpoint, writeRowerCheckpoint } from "./rowerCheckpointStore";
 import { CrewSessionStore } from "./sessionStore";
 import { TerminalHub } from "./terminalHub";
 
@@ -68,6 +71,7 @@ const MESSAGE_TYPES = new Set<MessageType>([
 ]);
 const ADVISOR_KINDS = new Set<AdvisorMessageKind>(["advice", "research", "risk"]);
 const execFileAsync = promisify(execFile);
+const ROWER_ATTACH_MODES = new Set<RowerAttachMode>(["view", "assist", "takeover"]);
 
 function isMessageType(value: unknown): value is MessageType {
   return typeof value === "string" && MESSAGE_TYPES.has(value as MessageType);
@@ -198,6 +202,88 @@ function parseMessageInput(value: unknown): SendMessageInput | { error: string }
   };
 }
 
+function parseAttachMode(value: unknown): RowerAttachMode | { error: string } {
+  const mode = typeof value === "string" ? value.trim() : "view";
+
+  if (ROWER_ATTACH_MODES.has(mode as RowerAttachMode)) {
+    return mode as RowerAttachMode;
+  }
+
+  return { error: "Attach mode must be view, assist, or takeover." };
+}
+
+function parseAttachStartInput(value: unknown): { mode: RowerAttachMode; operator?: string } | { error: string } {
+  const payload = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const mode = parseAttachMode(payload.mode);
+
+  if (typeof mode !== "string") {
+    return mode;
+  }
+
+  return {
+    mode,
+    operator: typeof payload.operator === "string" ? payload.operator.trim() || undefined : undefined
+  };
+}
+
+function parseAttachInput(value: unknown): { sessionId: string; text: string } | { error: string } {
+  if (!value || typeof value !== "object") {
+    return { error: "Attach input payload is required." };
+  }
+
+  const payload = value as Record<string, unknown>;
+  const sessionId = typeof payload.sessionId === "string" ? payload.sessionId.trim() : "";
+  const text = typeof payload.text === "string" ? payload.text : "";
+
+  if (!sessionId) {
+    return { error: "sessionId is required." };
+  }
+
+  if (!text) {
+    return { error: "text is required." };
+  }
+
+  return {
+    sessionId,
+    text
+  };
+}
+
+function parseCheckpointInput(value: unknown, defaults: { agentId: string; runId: string; timestamp?: string }): RowerCheckpointInput | { error: string } {
+  if (!value || typeof value !== "object") {
+    return { error: "划手状态检查点 payload is required." };
+  }
+
+  const payload = value as Record<string, unknown>;
+  const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
+  const status = typeof payload.status === "string" ? payload.status.trim() : "";
+
+  if (!summary) {
+    return { error: "summary is required." };
+  }
+
+  if (!status) {
+    return { error: "status is required." };
+  }
+
+  return {
+    agentId: defaults.agentId,
+    changedFiles: Array.isArray(payload.changedFiles) ? payload.changedFiles.map(String) : [],
+    currentFocus: typeof payload.currentFocus === "string" ? payload.currentFocus : "",
+    decisions: Array.isArray(payload.decisions) ? payload.decisions.map(String) : [],
+    evidencePaths: Array.isArray(payload.evidencePaths) ? payload.evidencePaths.map(String) : [],
+    handoffPaths: Array.isArray(payload.handoffPaths) ? payload.handoffPaths.map(String) : [],
+    nextActions: Array.isArray(payload.nextActions) ? payload.nextActions.map(String) : [],
+    openQuestions: Array.isArray(payload.openQuestions) ? payload.openQuestions.map(String) : [],
+    risks: Array.isArray(payload.risks) ? payload.risks.map(String) : [],
+    runId: defaults.runId,
+    status,
+    summary,
+    taskId: typeof payload.taskId === "string" ? payload.taskId.trim() || "task_general" : "task_general",
+    timestamp: typeof payload.timestamp === "string" ? payload.timestamp : defaults.timestamp
+  };
+}
+
 function parseHumanLoopLanguage(value: FormDataEntryValue | null): DemoLanguage | { error: string } {
   if (value === null || value === "zh") {
     return "zh";
@@ -235,6 +321,19 @@ function materializeSessionInboxMessage(workspaceRoot: string, runId: string, in
   ].join("\n");
   writeFileSync(filePath, content);
   return filePath;
+}
+
+function takeoverBlockResponse(engine: DemoEngine, agentId: string, source: string) {
+  engine.appendRowerAttachBlocked({
+    agentId,
+    reason: "taken_over",
+    source
+  });
+
+  return {
+    error: `划手 ${agentId} 当前被用户接管，DragonBoat 已暂停向该划手注入新指令。请先 release 后再继续。`,
+    reason: "taken_over"
+  };
 }
 
 async function parseHumanLoopInput(formData: FormData, uploadDir: string): Promise<SendHumanLoopInput | { error: string }> {
@@ -1041,6 +1140,82 @@ function ensureDynamicRowerCwd(workspaceRoot: string, runDir: string, runId: str
   return cwd;
 }
 
+function shellQuote(value: string) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function findDragonBoatBin(startDir: string, fallbackWorkspaceRoot: string) {
+  let current = resolve(startDir);
+
+  while (true) {
+    const candidate = join(current, ".dragonboat", "bin", "dragonboat");
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+
+    const parent = dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+
+  return join(fallbackWorkspaceRoot, ".dragonboat", "bin", "dragonboat");
+}
+
+function installRowerClaudeCheckpointHook(input: {
+  agentId: string;
+  cwd: string;
+  runId: string;
+  workspaceRoot: string;
+}) {
+  const settingsDir = join(input.cwd, ".claude");
+  const settingsPath = join(settingsDir, "settings.local.json");
+  mkdirSync(settingsDir, { recursive: true });
+
+  const existing = existsSync(settingsPath)
+    ? JSON.parse(readFileSync(settingsPath, "utf8")) as Record<string, unknown>
+    : {};
+  const hooks = existing.hooks && typeof existing.hooks === "object" ? (existing.hooks as Record<string, unknown>) : {};
+  const stopHooks = Array.isArray(hooks.Stop) ? hooks.Stop : [];
+  const dragonboatBin = findDragonBoatBin(input.cwd, input.workspaceRoot);
+  const innerCommand = [
+    `DRAGONBOAT_AGENT_ID=${shellQuote(input.agentId)}`,
+    `DRAGONBOAT_RUN_ID=${shellQuote(input.runId)}`,
+    `DRAGONBOAT_WORKSPACE_ROOT=${shellQuote(input.workspaceRoot)}`,
+    shellQuote(dragonboatBin),
+    "rower checkpoint ensure",
+    "--agent",
+    shellQuote(input.agentId),
+    "--run",
+    shellQuote(input.runId),
+    "--hook-input -"
+  ].join(" ");
+  const command = `bash -lc ${shellQuote(innerCommand)}`;
+  const filteredStopHooks = stopHooks.filter((entry) => !JSON.stringify(entry).includes("rower checkpoint ensure"));
+  const nextSettings = {
+    ...existing,
+    hooks: {
+      ...hooks,
+      Stop: [
+        {
+          hooks: [
+            {
+              command,
+              timeout: 20,
+              type: "command"
+            }
+          ]
+        },
+        ...filteredStopHooks
+      ]
+    }
+  };
+
+  writeFileSync(settingsPath, `${JSON.stringify(nextSettings, null, 2)}\n`);
+  return settingsPath;
+}
+
 function firstCrewLoopGuardrail(agentId: string) {
   const guardrails: Record<string, string[]> = {
     agent_backend: [
@@ -1121,6 +1296,7 @@ function dynamicClaudeArgs(
 }
 
 interface DemoApiDependencies {
+  attachRegistry?: RowerAttachRegistry;
   claudeRouteHealthCheck?: typeof checkClaudeRouteHealth;
   clock?: () => string;
   crewPtyManager?: CrewPtyAdapter;
@@ -1148,6 +1324,7 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
   );
   const terminalHub = dependencies.terminalHub ?? new TerminalHub();
   const crewPtyManager = dependencies.crewPtyManager ?? new CrewPtyManager({ terminalHub });
+  const attachRegistry = dependencies.attachRegistry ?? new RowerAttachRegistry(dependencies.clock);
   const defaultRunStoreDir =
     !dependencies.runStoreDir && process.env.VITEST ? mkdtempSync(join(tmpdir(), "dragonboat-demo-runs-")) : undefined;
   const sessionStore =
@@ -1627,6 +1804,12 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
     engine.appendRouteDecision(routeDecision);
 
     try {
+      const hookPath = installRowerClaudeCheckpointHook({
+        agentId: input.agentId,
+        cwd,
+        runId,
+        workspaceRoot
+      });
       await crewPtyManager.startAgent({
         agentId: input.agentId,
         args,
@@ -1636,6 +1819,7 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
         env: ptyEnv,
         runId
       });
+      engine.appendCommandOutput(input.agentId, `Claude Code Stop hook installed for 划手状态检查点: ${hookPath}`);
       engine.appendMailboxMessage({
         body: rowerPrompt,
         from: "agent_codex",
@@ -1692,6 +1876,316 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
     return context.json(snapshot);
   });
 
+  app.get("/api/sessions/:runId/rowers", (context) => {
+    const runId = context.req.param("runId");
+
+    try {
+      const engine = sessionStore.setActiveRun(runId);
+      const snapshot = engine.snapshot();
+      return context.json({
+        rowers: snapshot.crew.rowers.map((rower) => ({
+          ...rower,
+          attach: attachRegistry.status(runId, rower.id),
+          checkpoint: readLatestRowerCheckpoint(sessionStore.workspaceRoot(runId), rower.id)
+        }))
+      });
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+  });
+
+  app.post("/api/sessions/:runId/rowers/:agentId/attach", async (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+    const payload = await context.req.json().catch(() => ({}));
+    const input = parseAttachStartInput(payload);
+
+    if ("error" in input) {
+      return context.json({ error: input.error }, 400);
+    }
+
+    let engine;
+    try {
+      engine = sessionStore.setActiveRun(runId);
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    const rower = engine.snapshot().crew.rowers.find((member) => member.id === agentId);
+    if (!rower) {
+      return context.json({ error: "Unknown rower." }, 404);
+    }
+
+    const started = attachRegistry.start({
+      agentId,
+      mode: input.mode,
+      operator: input.operator,
+      runId
+    });
+
+    if (!started.ok) {
+      engine.appendRowerAttachBlocked({
+        agentId,
+        reason: "already_taken_over",
+        sessionId: started.activeSession.id,
+        source: input.operator ?? "human"
+      });
+      return context.json(
+        {
+          activeSession: started.activeSession,
+          error: `划手 ${agentId} 已经被接管。`,
+          reason: "already_taken_over"
+        },
+        409
+      );
+    }
+
+    engine.appendRowerAttachStarted({
+      agentId,
+      mode: started.session.mode,
+      operator: started.session.operator,
+      sessionId: started.session.id
+    });
+
+    return context.json(
+      {
+        attach: attachRegistry.status(runId, agentId),
+        buffer: terminalHub.snapshot(runId, agentId),
+        session: started.session
+      },
+      201
+    );
+  });
+
+  app.post("/api/sessions/:runId/rowers/:agentId/attach/input", async (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+    const payload = await context.req.json().catch(() => null);
+    const input = parseAttachInput(payload);
+
+    if ("error" in input) {
+      return context.json({ error: input.error }, 400);
+    }
+
+    let engine;
+    try {
+      engine = sessionStore.setActiveRun(runId);
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    const session = attachRegistry.getSession(input.sessionId);
+    if (!session || session.runId !== runId || session.agentId !== agentId) {
+      engine.appendRowerAttachBlocked({
+        agentId,
+        reason: "invalid_attach_session",
+        sessionId: input.sessionId,
+        source: "human"
+      });
+      return context.json({ error: "Invalid attach session." }, 404);
+    }
+
+    if (!attachRegistry.canInput(input.sessionId)) {
+      engine.appendRowerAttachBlocked({
+        agentId,
+        reason: session.mode === "view" ? "view_mode_is_read_only" : "attach_session_ended",
+        sessionId: input.sessionId,
+        source: session.operator
+      });
+      return context.json({ error: "当前进入模式不能向划手输入。" }, 409);
+    }
+
+    const text = input.text;
+    const written = crewPtyManager.write(runId, agentId, text, {
+      echo: `[${session.operator} -> ${agentId}] ${text}`
+    });
+    if (written === false) {
+      return context.json({ error: "Rower PTY is not running." }, 409);
+    }
+
+    const snapshot = engine.appendRowerAttachInputSent({
+      agentId,
+      bytes: Buffer.byteLength(text),
+      mode: session.mode,
+      operator: session.operator,
+      sessionId: session.id,
+      text
+    });
+
+    return context.json({
+      run: snapshot,
+      written: true
+    });
+  });
+
+  app.post("/api/sessions/:runId/rowers/:agentId/attach/end", async (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+    const payload = await context.req.json().catch(() => null);
+    const sessionId = payload && typeof payload === "object" && typeof (payload as Record<string, unknown>).sessionId === "string"
+      ? String((payload as Record<string, unknown>).sessionId)
+      : "";
+
+    if (!sessionId) {
+      return context.json({ error: "sessionId is required." }, 400);
+    }
+
+    let engine;
+    try {
+      engine = sessionStore.setActiveRun(runId);
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    const ended = attachRegistry.end(sessionId);
+    if (!ended.session || ended.session.agentId !== agentId || ended.session.runId !== runId) {
+      return context.json({ error: "Invalid attach session." }, 404);
+    }
+
+    engine.appendRowerAttachEnded({
+      agentId,
+      mode: ended.session.mode,
+      operator: ended.session.operator,
+      sessionId
+    });
+
+    return context.json({
+      ended: ended.ended
+    });
+  });
+
+  app.post("/api/sessions/:runId/rowers/:agentId/release", (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+
+    let engine;
+    try {
+      engine = sessionStore.setActiveRun(runId);
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    const released = attachRegistry.release(runId, agentId);
+    engine.appendRowerTakeoverReleased({
+      agentId,
+      operator: released.session?.operator ?? "human",
+      sessionId: released.session?.id
+    });
+
+    return context.json({
+      released: released.released
+    });
+  });
+
+  app.post("/api/sessions/:runId/rowers/:agentId/checkpoints", async (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+    const payload = await context.req.json().catch(() => null);
+
+    let engine;
+    try {
+      engine = sessionStore.setActiveRun(runId);
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    const input = parseCheckpointInput(payload, {
+      agentId,
+      runId,
+      timestamp: dependencies.clock?.() ?? new Date().toISOString()
+    });
+    if ("error" in input) {
+      return context.json({ error: input.error }, 400);
+    }
+
+    try {
+      const checkpoint = createRowerCheckpoint(input);
+      const paths = writeRowerCheckpoint({
+        checkpoint,
+        runDir: sessionStore.runDir(runId),
+        workspaceRoot: sessionStore.workspaceRoot(runId)
+      });
+      const snapshot = engine.appendRowerCheckpointCreated(checkpoint, {
+        paths: paths as unknown as Record<string, string>
+      });
+      return context.json(
+        {
+          checkpoint,
+          paths,
+          run: snapshot
+        },
+        201
+      );
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unable to create checkpoint." }, 400);
+    }
+  });
+
+  app.get("/api/sessions/:runId/rowers/:agentId/checkpoints", (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+
+    try {
+      sessionStore.setActiveRun(runId);
+      return context.json({
+        checkpoints: listRowerCheckpoints(sessionStore.runDir(runId), agentId)
+      });
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+  });
+
+  app.get("/api/sessions/:runId/rowers/:agentId/checkpoints/latest", (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+
+    try {
+      sessionStore.setActiveRun(runId);
+      const checkpoint = readLatestRowerCheckpoint(sessionStore.workspaceRoot(runId), agentId);
+      if (!checkpoint) {
+        return context.json({ error: "No valid 划手状态检查点 found." }, 404);
+      }
+      return context.json({ checkpoint });
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+  });
+
+  app.post("/api/sessions/:runId/rowers/:agentId/checkpoints/ensure", async (context) => {
+    const runId = context.req.param("runId");
+    const agentId = context.req.param("agentId");
+
+    let engine;
+    try {
+      engine = sessionStore.setActiveRun(runId);
+    } catch (cause) {
+      return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    const checkpoint = readLatestRowerCheckpoint(sessionStore.workspaceRoot(runId), agentId);
+    if (!checkpoint) {
+      const snapshot = engine.appendRowerCheckpointMissing(agentId, {
+        reason: "No valid 划手状态检查点 found before Claude Code Stop hook.",
+        source: "claude_stop_hook"
+      });
+      return context.json(
+        {
+          error: "缺少有效的划手状态检查点。请先生成检查点再结束本轮任务。",
+          run: snapshot
+        },
+        409
+      );
+    }
+
+    const snapshot = engine.appendRowerCheckpointValidated(checkpoint, {
+      source: "claude_stop_hook"
+    });
+    return context.json({
+      checkpoint,
+      run: snapshot
+    });
+  });
+
   app.post("/api/sessions/:runId/messages", async (context) => {
     const runId = context.req.param("runId");
     const payload = await context.req.json().catch(() => null);
@@ -1706,6 +2200,10 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
       engine = sessionStore.setActiveRun(runId);
     } catch (cause) {
       return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    if (!attachRegistry.canInject(runId, input.to).ok) {
+      return context.json(takeoverBlockResponse(engine, input.to, input.from), 409);
     }
 
     const snapshot = engine.appendMailboxMessage(input);
@@ -1756,6 +2254,9 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
 
     let snapshot = engine.snapshot();
     for (const input of inputs) {
+      if (!attachRegistry.canInject(runId, input.to).ok) {
+        return context.json(takeoverBlockResponse(engine, input.to, input.from), 409);
+      }
       snapshot = engine.appendMailboxMessage(input);
       const injected = crewPtyManager.write(runId, input.to, `${input.body}\r`, {
         echo: `[${input.from} -> ${input.to}] ${input.body}`
@@ -1782,6 +2283,10 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
       engine = sessionStore.setActiveRun(runId);
     } catch (cause) {
       return context.json({ error: cause instanceof Error ? cause.message : "Unknown session." }, 404);
+    }
+
+    if (!attachRegistry.canInject(runId, input.recipient).ok) {
+      return context.json(takeoverBlockResponse(engine, input.recipient, input.from), 409);
     }
 
     const snapshot = engine.appendStructuredHandoff(input);
@@ -1946,6 +2451,9 @@ export function createDemoApi(dependencies: DemoApiDependencies = {}) {
       const engine = sessionStore.getEngine(runId);
       const configs = agentConfigStore(runId).update(agentId, input);
       if (crewPtyManager.isRunning(runId, agentId)) {
+        if (!attachRegistry.canInject(runId, agentId).ok) {
+          return context.json(takeoverBlockResponse(engine, agentId, "agent_config"), 409);
+        }
         for (const command of configCommands(input)) {
           crewPtyManager.write(runId, agentId, command.text, {
             echo: command.echo

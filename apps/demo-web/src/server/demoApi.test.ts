@@ -486,6 +486,174 @@ describe("DragonBoat demo API", () => {
     }
   });
 
+  it("blocks steerer injection while a rower is taken over and releases the lock", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "dragonboat-api-rower-takeover-"));
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "dragonboat-api-rower-takeover-workspace-"));
+    const writes: Array<{ agentId: string; text: string }> = [];
+    const crewPtyManager = {
+      isRunning: vi.fn(() => true),
+      startAgent: vi.fn(async () => undefined),
+      stopAgent: vi.fn(() => true),
+      write: vi.fn((_runId: string, agentId: string, text: string) => {
+        writes.push({ agentId, text });
+        return true;
+      })
+    };
+    const app = createDemoApi({
+      crewPtyManager,
+      runStoreDir: tempDir
+    });
+
+    try {
+      const registerResponse = await app.request("/api/steerer/register", {
+        body: JSON.stringify({
+          projectName: "takeover-demo",
+          workspaceRoot
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+      const registered = await registerResponse.json();
+      await app.request(`/api/sessions/${registered.runId}/rowers`, {
+        body: JSON.stringify({
+          agentId: "agent_backend",
+          prompt: "请处理后端任务。",
+          role: "backend"
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+
+      const attachResponse = await app.request(`/api/sessions/${registered.runId}/rowers/agent_backend/attach`, {
+        body: JSON.stringify({ mode: "takeover" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+      const attach = await attachResponse.json();
+
+      expect(attachResponse.status).toBe(201);
+      expect(attach.session).toMatchObject({ mode: "takeover" });
+
+      const blockedResponse = await app.request(`/api/sessions/${registered.runId}/messages`, {
+        body: JSON.stringify({
+          body: "鼓手补充指令",
+          to: "agent_backend",
+          type: "instruction"
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+      const blocked = await blockedResponse.json();
+
+      expect(blockedResponse.status).toBe(409);
+      expect(blocked.error).toContain("接管");
+      expect(writes).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ text: expect.stringContaining("鼓手补充指令") })])
+      );
+
+      const releaseResponse = await app.request(`/api/sessions/${registered.runId}/rowers/agent_backend/release`, {
+        method: "POST"
+      });
+
+      expect(releaseResponse.status).toBe(200);
+
+      const messageResponse = await app.request(`/api/sessions/${registered.runId}/messages`, {
+        body: JSON.stringify({
+          body: "释放后补充指令",
+          to: "agent_backend",
+          type: "instruction"
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+
+      expect(messageResponse.status).toBe(201);
+      expect(writes).toEqual(
+        expect.arrayContaining([expect.objectContaining({ text: expect.stringContaining("释放后补充指令") })])
+      );
+    } finally {
+      rmSync(tempDir, {
+        force: true,
+        recursive: true
+      });
+      rmSync(workspaceRoot, {
+        force: true,
+        recursive: true
+      });
+    }
+  });
+
+  it("creates and validates rower state checkpoints", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "dragonboat-api-rower-checkpoint-"));
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "dragonboat-api-rower-checkpoint-workspace-"));
+    const app = createDemoApi({
+      clock: () => "2026-06-20T00:00:00.000Z",
+      runStoreDir: tempDir
+    });
+
+    try {
+      const registerResponse = await app.request("/api/steerer/register", {
+        body: JSON.stringify({
+          projectName: "checkpoint-demo",
+          workspaceRoot
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+      const registered = await registerResponse.json();
+
+      const missingResponse = await app.request(
+        `/api/sessions/${registered.runId}/rowers/agent_backend/checkpoints/ensure`,
+        {
+          body: JSON.stringify({ taskId: "task_backend" }),
+          headers: { "content-type": "application/json" },
+          method: "POST"
+        }
+      );
+      expect(missingResponse.status).toBe(409);
+
+      const createResponse = await app.request(`/api/sessions/${registered.runId}/rowers/agent_backend/checkpoints`, {
+        body: JSON.stringify({
+          currentFocus: "正在等待鼓手 review",
+          decisions: ["保留 raw logs"],
+          status: "done",
+          summary: "后端接管功能已完成。",
+          taskId: "task_backend"
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      });
+      const created = await createResponse.json();
+
+      expect(createResponse.status).toBe(201);
+      expect(created.checkpoint.summary).toBe("后端接管功能已完成。");
+      expect(existsSync(join(workspaceRoot, ".dragonboat", "checkpoints", "agent_backend.current.json"))).toBe(true);
+
+      const ensureResponse = await app.request(
+        `/api/sessions/${registered.runId}/rowers/agent_backend/checkpoints/ensure`,
+        {
+          body: JSON.stringify({ taskId: "task_backend" }),
+          headers: { "content-type": "application/json" },
+          method: "POST"
+        }
+      );
+      expect(ensureResponse.status).toBe(200);
+
+      const latestResponse = await app.request(`/api/sessions/${registered.runId}/rowers/agent_backend/checkpoints/latest`);
+      const latest = await latestResponse.json();
+      expect(latest.checkpoint.summary).toBe("后端接管功能已完成。");
+    } finally {
+      rmSync(tempDir, {
+        force: true,
+        recursive: true
+      });
+      rmSync(workspaceRoot, {
+        force: true,
+        recursive: true
+      });
+    }
+  });
+
   it("records structured handoff, recipient ack, and atomic task completion through session APIs", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "dragonboat-api-structured-handoff-"));
     const app = createDemoApi({
@@ -962,6 +1130,13 @@ describe("DragonBoat demo API", () => {
       expect(readFileSync(join(starts[0].cwd, ".dragonboat", "skills", "dragonboat-rower.md"), "utf8")).toBe(
         "rower skill\n"
       );
+      const hookSettings = JSON.parse(readFileSync(join(starts[0].cwd, ".claude", "settings.local.json"), "utf8"));
+      const hookCommand = hookSettings.hooks.Stop[0].hooks[0].command as string;
+      expect(hookCommand).toContain("rower checkpoint ensure");
+      expect(hookCommand).toContain("DRAGONBOAT_AGENT_ID=");
+      expect(hookCommand).toContain("agent_backend");
+      expect(hookCommand).toContain("DRAGONBOAT_RUN_ID=");
+      expect(hookCommand).toContain(registered.runId);
       expect(existsSync(join(starts[0].cwd, "node_modules", "should-not-copy.txt"))).toBe(false);
 
       await app.request(`/api/sessions/${registered.runId}/rowers/agent_backend`, {

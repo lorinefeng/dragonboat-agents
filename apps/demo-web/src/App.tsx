@@ -198,7 +198,11 @@ const COPY = {
     currentMode: "Current mode",
     activePhase: "Active phase",
     activeAgents: "Active agents",
+    attachAssisting: "User assisting",
+    attachTakenOver: "User takeover",
+    attachViewing: "User viewing",
     claimLedger: "Claim ledger",
+    checkpointLabel: "Checkpoint",
     archiveRower: "Archive",
     evidenceTruth: "Evidence truth",
     phaseTimeline: "Phase timeline",
@@ -294,7 +298,11 @@ const COPY = {
     currentMode: "当前模式",
     activePhase: "当前阶段",
     activeAgents: "活跃 Agent",
+    attachAssisting: "用户协助中",
+    attachTakenOver: "用户接管中",
+    attachViewing: "用户只读查看",
     claimLedger: "Claim 账本",
+    checkpointLabel: "检查点",
     archiveRower: "归档",
     evidenceTruth: "证据真相",
     phaseTimeline: "阶段时间线",
@@ -684,6 +692,16 @@ function statusLabel(status: string, locale: Locale) {
   };
 
   return (locale === "zh" ? zh : en)[status] ?? status;
+}
+
+function attachStatusLabel(status: NonNullable<DemoRun["crew"]["rowers"][number]["attach"]>["status"], labels: (typeof COPY)[Locale]) {
+  if (status === "taken_over") {
+    return labels.attachTakenOver;
+  }
+  if (status === "assisting") {
+    return labels.attachAssisting;
+  }
+  return labels.attachViewing;
 }
 
 function isAgentSpeech(line: string) {
@@ -1584,6 +1602,17 @@ function AgentGraphNode({ data }: NodeProps<CrewGraphNode>) {
         </button>
       </div>
       <AgentConfigControl data={data} />
+      {!isSteerer && data.member.attach ? (
+        <div className={`agent-attach-chip attach-${data.member.attach.status}`}>
+          {attachStatusLabel(data.member.attach.status, labels)}
+        </div>
+      ) : null}
+      {!isSteerer && data.member.latestCheckpoint ? (
+        <div className="agent-checkpoint-summary">
+          <span>{labels.checkpointLabel}</span>
+          <p>{data.member.latestCheckpoint.summary}</p>
+        </div>
+      ) : null}
       {data.latestAdjustment ? <div className="rower-live-bubble">{data.latestAdjustment}</div> : null}
       {isSteerer ? (
         <div className="steerer-node-actions">

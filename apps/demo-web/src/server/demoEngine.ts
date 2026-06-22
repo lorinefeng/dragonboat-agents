@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInitialDemoRun } from "../shared/seed";
 import { evaluateEvidenceGate, type EvidenceTaskType } from "../shared/evidenceGate";
+import type { RowerCheckpoint } from "../shared/rowerCheckpoint";
 import { createHandoffId } from "../shared/structuredHandoff";
 import type {
   AgentPlatform,
@@ -182,6 +183,10 @@ function asPlatform(value: unknown): AgentPlatform {
   return value === "codex_cli" ? "codex_cli" : "claude_code_cli";
 }
 
+function asAttachMode(value: unknown): "assist" | "takeover" | "view" {
+  return value === "assist" || value === "takeover" ? value : "view";
+}
+
 function titleCaseRole(role: string) {
   return role
     .split(/[_-]+/g)
@@ -349,6 +354,22 @@ function upsertCrewMember(run: DemoRun, member: CrewMember): DemoRun {
   };
 }
 
+function updateCrewMemberDetails(
+  run: DemoRun,
+  agentId: string,
+  update: (member: CrewMember) => CrewMember
+): DemoRun {
+  const updateMember = (member: CrewMember) => (member.id === agentId ? update(member) : member);
+
+  return {
+    ...run,
+    crew: {
+      steerer: updateMember(run.crew.steerer),
+      rowers: run.crew.rowers.map(updateMember)
+    }
+  };
+}
+
 function updateCrewStatus(run: DemoRun, agentId: string, status: AgentStatus): DemoRun {
   const updateMember = (member: DemoRun["crew"]["steerer"]) =>
     member.id === agentId ? { ...member, status } : member;
@@ -403,6 +424,50 @@ function deriveRun(events: DemoEvent[], runId = DEFAULT_RUN_ID): DemoRun {
         role,
         status: (asString(event.payload?.status) as AgentStatus) || (role === "steerer" ? "steering" : "ready")
       });
+    }
+
+    if (event.type === "rower.attach.started") {
+      const agentId = asString(event.payload?.agentId);
+      const mode = asAttachMode(event.payload?.mode);
+      const status = mode === "takeover" ? "taken_over" : mode === "assist" ? "assisting" : "viewing";
+      run = updateCrewMemberDetails(run, agentId, (member) => ({
+        ...member,
+        attach: {
+          mode,
+          operator: asString(event.payload?.operator) || "human",
+          sessionId: asString(event.payload?.sessionId),
+          startedAt: event.createdAt,
+          status
+        }
+      }));
+    }
+
+    if (event.type === "rower.attach.ended" || event.type === "rower.takeover.released") {
+      const agentId = asString(event.payload?.agentId);
+      const sessionId = asString(event.payload?.sessionId);
+      run = updateCrewMemberDetails(run, agentId, (member) => {
+        if (sessionId && member.attach?.sessionId && member.attach.sessionId !== sessionId) {
+          return member;
+        }
+
+        return {
+          ...member,
+          attach: undefined
+        };
+      });
+    }
+
+    if (event.type === "rower.checkpoint.created" || event.type === "rower.checkpoint.validated") {
+      const agentId = asString(event.payload?.agentId) || event.actor;
+      run = updateCrewMemberDetails(run, agentId, (member) => ({
+        ...member,
+        latestCheckpoint: {
+          status: asString(event.payload?.status),
+          summary: asString(event.payload?.summary),
+          taskId: asString(event.payload?.taskId) || event.taskId || "task_general",
+          timestamp: asString(event.payload?.timestamp) || event.createdAt
+        }
+      }));
     }
 
     if (event.type === "task.packet.created") {
@@ -1022,6 +1087,143 @@ export class DemoEngine {
         source: input.source,
         waveId: input.waveId
       }
+    });
+  }
+
+  appendRowerAttachStarted(input: {
+    agentId: string;
+    mode: string;
+    operator?: string;
+    sessionId: string;
+  }) {
+    return this.append({
+      type: "rower.attach.started",
+      actor: input.operator ?? "human",
+      payload: {
+        agentId: input.agentId,
+        mode: input.mode,
+        operator: input.operator ?? "human",
+        sessionId: input.sessionId
+      }
+    });
+  }
+
+  appendRowerAttachInputSent(input: {
+    agentId: string;
+    bytes: number;
+    mode: string;
+    operator?: string;
+    sessionId: string;
+    text?: string;
+  }) {
+    return this.append({
+      type: "rower.attach.input_sent",
+      actor: input.operator ?? "human",
+      payload: {
+        agentId: input.agentId,
+        bytes: input.bytes,
+        mode: input.mode,
+        operator: input.operator ?? "human",
+        sessionId: input.sessionId,
+        text: input.text
+      }
+    });
+  }
+
+  appendRowerAttachEnded(input: {
+    agentId: string;
+    mode: string;
+    operator?: string;
+    sessionId: string;
+  }) {
+    return this.append({
+      type: "rower.attach.ended",
+      actor: input.operator ?? "human",
+      payload: {
+        agentId: input.agentId,
+        mode: input.mode,
+        operator: input.operator ?? "human",
+        sessionId: input.sessionId
+      }
+    });
+  }
+
+  appendRowerAttachBlocked(input: {
+    agentId: string;
+    reason: string;
+    sessionId?: string;
+    source?: string;
+  }) {
+    return this.append({
+      type: "rower.attach.blocked",
+      actor: input.source ?? "agent_codex",
+      payload: {
+        agentId: input.agentId,
+        reason: input.reason,
+        sessionId: input.sessionId,
+        source: input.source
+      }
+    });
+  }
+
+  appendRowerTakeoverReleased(input: {
+    agentId: string;
+    operator?: string;
+    sessionId?: string;
+  }) {
+    return this.append({
+      type: "rower.takeover.released",
+      actor: input.operator ?? "human",
+      payload: {
+        agentId: input.agentId,
+        operator: input.operator ?? "human",
+        sessionId: input.sessionId
+      }
+    });
+  }
+
+  appendRowerCheckpointRequested(agentId: string, input: { reason?: string; source?: string } = {}) {
+    return this.append({
+      type: "rower.checkpoint.requested",
+      actor: input.source ?? "agent_codex",
+      payload: {
+        agentId,
+        reason: input.reason,
+        source: input.source
+      }
+    });
+  }
+
+  appendRowerCheckpointCreated(checkpoint: RowerCheckpoint, input: { paths?: Record<string, string> } = {}) {
+    return this.append({
+      type: "rower.checkpoint.created",
+      actor: checkpoint.agentId,
+      taskId: checkpoint.taskId,
+      payload: {
+        ...checkpoint,
+        paths: input.paths
+      }
+    });
+  }
+
+  appendRowerCheckpointMissing(agentId: string, input: { reason?: string; source?: string } = {}) {
+    return this.append({
+      type: "rower.checkpoint.missing",
+      actor: input.source ?? agentId,
+      payload: {
+        agentId,
+        reason: input.reason ?? "No valid 划手状态检查点 exists for this rower.",
+        source: input.source
+      }
+    });
+  }
+
+  appendRowerCheckpointValidated(checkpoint: RowerCheckpoint, input: { source?: string } = {}) {
+    return this.append({
+      type: "rower.checkpoint.validated",
+      actor: input.source ?? checkpoint.agentId,
+      taskId: checkpoint.taskId,
+      payload: checkpoint as unknown as Record<string, unknown>
     });
   }
 

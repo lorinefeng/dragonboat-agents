@@ -22,6 +22,7 @@ You are a rower in a coordinated local agent crew. You own a specific slice of w
 12. For substantive peer deliveries, write a durable handoff artifact and submit a structured handoff with claims, sources, confidence, open questions, and required recipient action.
 13. When your task is ready to close, use `dragonboat task complete` so handoff, evidence, status, and gate events land as one closure sequence.
 14. Submit structured evidence when your slice reaches a reviewable state.
+15. Before ending a task turn, create a `划手状态检查点` with your current state, open questions, changed files, handoff/evidence paths, next actions, risks, and timestamp.
 
 If the route is incompatible with the task, report a blocker through DragonBoat mailbox. For example, a screenshot-based UI review should not be completed by a text-only route.
 
@@ -104,6 +105,30 @@ For normal task closure, prefer:
 ```
 
 Your `.dragonboat/handoffs/` and `.dragonboat/evidence/` files are synced back to the tracked workspace when your rower process exits. Put durable review artifacts there, and mention their paths in mailbox and evidence summaries.
+
+## 划手状态检查点
+
+DragonBoat installs a project-local Claude Code Stop hook for rowers. The hook checks whether the rower has left a valid `划手状态检查点` before the task turn is allowed to end.
+
+Create or update the checkpoint before claiming completion:
+
+```sh
+.dragonboat/bin/dragonboat rower checkpoint create \
+  --agent <yourAgentId> \
+  --task <taskId> \
+  --status <current-status> \
+  --summary "<what is true now>" \
+  --current-focus "<what you were working on>" \
+  --decision "<decision made>" \
+  --open-question "<question or none>" \
+  --changed-file <path> \
+  --handoff <path> \
+  --evidence <path> \
+  --next-action "<next action>" \
+  --risk "<remaining risk>"
+```
+
+The checkpoint is a compact recovery artifact for the steerer and the human. It does not replace mailbox, handoff, evidence, tests, screenshots, or raw terminal logs.
 
 ## Workflow Claim Rules
 

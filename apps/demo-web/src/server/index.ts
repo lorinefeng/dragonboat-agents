@@ -72,7 +72,7 @@ if (await existingDragonBoatApiIsHealthy(port, expectedWorkspaceRoot)) {
 
   server.on("upgrade", (request, socket, head) => {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
-    const match = url.pathname.match(/^\/api\/terminal\/([^/]+)\/([^/]+)$/);
+    const match = url.pathname.match(/^\/api\/(?:terminal|attach)\/([^/]+)\/([^/]+)$/);
 
     if (!match) {
       socket.destroy();

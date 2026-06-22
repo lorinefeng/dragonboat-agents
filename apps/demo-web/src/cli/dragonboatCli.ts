@@ -5,6 +5,7 @@ import { createServer } from "node:net";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn as spawnPty } from "node-pty";
+import WebSocket from "ws";
 import {
   type AcceptanceCheck,
   type AcceptanceReport,
@@ -48,6 +49,12 @@ import {
   type WorkflowPhaseKind
 } from "../shared/agenticWorkflow.ts";
 import { formatEvidenceGateReport, evaluateEvidenceGate, type EvidenceTaskType } from "../shared/evidenceGate.ts";
+import {
+  createRowerCheckpoint,
+  formatRowerCheckpointMarkdown,
+  validateRowerCheckpoint,
+  type RowerCheckpoint
+} from "../shared/rowerCheckpoint.ts";
 import {
   createHandoffId,
   normalizeHandoffAckStatus,
@@ -101,6 +108,7 @@ interface SpawnOptions {
 type SpawnForeground = (command: string, args: string[], options: SpawnOptions) => Promise<number>;
 type SpawnBackground = (command: string, args: string[], options: SpawnOptions) => { pid?: number };
 type CheckClaudeRouteHealth = typeof checkClaudeRouteHealth;
+type PortAvailable = (port: number) => Promise<boolean>;
 
 interface DragonBoatCliDependencies {
   checkClaudeRoute?: CheckClaudeRouteHealth;
@@ -109,6 +117,7 @@ interface DragonBoatCliDependencies {
   fetcher?: Fetcher;
   openUrl?: (url: string) => Promise<void>;
   pid?: number;
+  portAvailable?: PortAvailable;
   readFile?: (path: string) => string;
   spawnBackground?: SpawnBackground;
   spawnForeground?: SpawnForeground;
@@ -716,6 +725,18 @@ function commandsDoc() {
     "",
     "Use `supervise wait` after starting rowers when the steerer needs to remain live for intent confirmation, first status, evidence, blockers, or timeout-driven correction. The Stop-hook watchdog is a wake-up bridge, not a live supervision loop.",
     "",
+    "## Rower Attach And Checkpoints",
+    "",
+    "- List rowers that can be inspected or entered: `.dragonboat/bin/dragonboat rower list --latest`",
+    "- Read-only terminal view: `.dragonboat/bin/dragonboat rower attach --agent <agentId> --mode view --latest`",
+    "- Assist a rower with a one-off input while the steerer keeps scheduling authority: `.dragonboat/bin/dragonboat rower attach --agent <agentId> --mode assist --latest --text \"<extra context>\" --end`",
+    "- Take over a rower for direct operation: `.dragonboat/bin/dragonboat rower attach --agent <agentId> --mode takeover --latest`",
+    "- Release a stale or completed takeover lock: `.dragonboat/bin/dragonboat rower release --agent <agentId> --latest`",
+    "- Create a 划手状态检查点 before a rower ends: `.dragonboat/bin/dragonboat rower checkpoint create --agent <agentId> --task <taskId> --status <status> --summary \"<what is true now>\" --current-focus \"<current focus>\" --changed-file <path> --next-action \"<next action>\"`",
+    "- Read the latest checkpoint for planning: `.dragonboat/bin/dragonboat rower checkpoint latest --agent <agentId> --format markdown`",
+    "- Claude Code Stop hooks call `rower checkpoint ensure`; if it reports a missing checkpoint, the rower must create one before claiming the task is closed.",
+    "- A checkpoint is a Chinese-facing recovery artifact, not a replacement for mailbox, handoff, evidence, or raw terminal logs.",
+    "",
     "## Mailbox",
     "",
     "- Send an instruction: `.dragonboat/bin/dragonboat message send --to <agentId> --type instruction --body <text>`",
@@ -1083,10 +1104,10 @@ function isPortAvailable(port: number) {
   });
 }
 
-async function findAvailablePort(preferredPort: number) {
+async function findAvailablePort(preferredPort: number, portAvailable: PortAvailable = isPortAvailable) {
   for (let offset = 0; offset < 50; offset += 1) {
     const candidate = preferredPort + offset;
-    if (await isPortAvailable(candidate)) {
+    if (await portAvailable(candidate)) {
       return candidate;
     }
   }
@@ -1133,7 +1154,7 @@ async function explicitDeckPortIsUsable(
     return false;
   }
 
-  if (await isPortAvailable(port)) {
+  if (await deps.portAvailable(port)) {
     return true;
   }
 
@@ -1280,8 +1301,12 @@ async function deck(argv: string[], deps: Required<DragonBoatCliDependencies>) {
   const workspaceRoot = resolve(optionalFlag(flags, "workspace", deps.cwd()));
   const requestedApiPort = Number.parseInt(optionalFlag(flags, "api-port", String(parsePortFromUrl(apiUrl(deps.env), 8787))), 10);
   const requestedWebPort = Number.parseInt(optionalFlag(flags, "web-port", String(parsePortFromUrl(webUrl(deps.env), 5173))), 10);
-  const apiPort = flags.has("api-port") ? requestedApiPort : await findAvailablePort(Number.isFinite(requestedApiPort) ? requestedApiPort : 8787);
-  const webPort = flags.has("web-port") ? requestedWebPort : await findAvailablePort(Number.isFinite(requestedWebPort) ? requestedWebPort : 5173);
+  const apiPort = flags.has("api-port")
+    ? requestedApiPort
+    : await findAvailablePort(Number.isFinite(requestedApiPort) ? requestedApiPort : 8787, deps.portAvailable);
+  const webPort = flags.has("web-port")
+    ? requestedWebPort
+    : await findAvailablePort(Number.isFinite(requestedWebPort) ? requestedWebPort : 5173, deps.portAvailable);
   const apiBase = localUrl(apiPort);
   const webBase = localUrl(webPort);
 
@@ -2341,6 +2366,356 @@ async function stopRower(argv: string[], deps: Required<DragonBoatCliDependencie
     deps.stdout.write(`Recorded stop request for ${agentId} via local ledger fallback\n`);
   }
   return 0;
+}
+
+function resolveRunForRowerCommand(flags: Map<string, string>, deps: Required<DragonBoatCliDependencies>) {
+  if (flags.has("latest")) {
+    return latestRunId(workspaceRootFromDeps(deps));
+  }
+
+  return flags.get("run")?.trim() || deps.env.DRAGONBOAT_RUN_ID?.trim() || latestRunId(workspaceRootFromDeps(deps));
+}
+
+async function listRowers(argv: string[], deps: Required<DragonBoatCliDependencies>) {
+  const flags = parseFlags(argv);
+  const runId = resolveRunForRowerCommand(flags, deps);
+  const body = await getJson<{ rowers?: Array<Record<string, unknown>> }>(
+    deps.fetcher,
+    `${apiUrl(deps.env)}/api/sessions/${encodeURIComponent(runId)}/rowers`
+  );
+  const rowers = body.rowers ?? [];
+
+  if (flags.get("format") === "json") {
+    deps.stdout.write(`${JSON.stringify({ rowers, runId }, null, 2)}\n`);
+    return 0;
+  }
+
+  deps.stdout.write(`DragonBoat rowers for ${runId}\n`);
+  for (const rower of rowers) {
+    const attach = rower.attach as { canInject?: boolean; activeTakeover?: { operator?: string } } | undefined;
+    const checkpoint = rower.checkpoint as { summary?: string; timestamp?: string } | undefined;
+    deps.stdout.write(
+      [
+        `- ${String(rower.id ?? "")}`,
+        `status=${String(rower.status ?? "unknown")}`,
+        `role=${String(rower.role ?? "unknown")}`,
+        attach?.canInject === false ? `接管中=${attach.activeTakeover?.operator ?? "human"}` : "可进入",
+        checkpoint?.summary ? `检查点=${checkpoint.summary}` : "无检查点"
+      ].join("  ")
+    );
+    deps.stdout.write("\n");
+  }
+
+  return 0;
+}
+
+async function attachRower(argv: string[], deps: Required<DragonBoatCliDependencies>) {
+  const flags = parseFlags(argv);
+  const runId = resolveRunForRowerCommand(flags, deps);
+  const agentId = requireFlag(flags, "agent");
+  const mode = optionalFlag(flags, "mode", "view");
+  const started = await postJson<{
+    buffer?: string[];
+    session: {
+      id: string;
+      mode: string;
+    };
+  }>(deps.fetcher, `${apiUrl(deps.env)}/api/sessions/${encodeURIComponent(runId)}/rowers/${encodeURIComponent(agentId)}/attach`, {
+    mode,
+    operator: optionalFlag(flags, "operator", "human")
+  });
+
+  deps.stdout.write(`已进入 ${agentId}（${started.session.mode}）。退出快捷键：Ctrl-]\n`);
+  for (const chunk of started.buffer ?? []) {
+    deps.stdout.write(chunk);
+  }
+
+  const text = flags.get("text") ?? "";
+  if (text) {
+    await postJson(
+      deps.fetcher,
+      `${apiUrl(deps.env)}/api/sessions/${encodeURIComponent(runId)}/rowers/${encodeURIComponent(agentId)}/attach/input`,
+      {
+        sessionId: started.session.id,
+        text: text.endsWith("\r") || text.endsWith("\n") ? text : `${text}\r`
+      }
+    );
+    deps.stdout.write(`已向 ${agentId} 发送协助输入。\n`);
+  }
+
+  if (flags.has("end")) {
+    await postJson(
+      deps.fetcher,
+      `${apiUrl(deps.env)}/api/sessions/${encodeURIComponent(runId)}/rowers/${encodeURIComponent(agentId)}/attach/end`,
+      {
+        sessionId: started.session.id
+      }
+    );
+  }
+
+  if (!text && !flags.has("end") && !flags.has("no-follow") && process.stdin.isTTY && process.stdout.isTTY) {
+    await followAttachedRower({
+      agentId,
+      deps,
+      mode,
+      runId,
+      sessionId: started.session.id
+    });
+  }
+
+  return 0;
+}
+
+async function followAttachedRower(input: {
+  agentId: string;
+  deps: Required<DragonBoatCliDependencies>;
+  mode: string;
+  runId: string;
+  sessionId: string;
+}) {
+  const stdin = process.stdin;
+  const stdout = process.stdout;
+  const wasRaw = stdin.isRaw;
+  const terminalUrl = new URL(
+    `/api/attach/${encodeURIComponent(input.runId)}/${encodeURIComponent(input.agentId)}`,
+    apiUrl(input.deps.env)
+  );
+  terminalUrl.protocol = terminalUrl.protocol === "https:" ? "wss:" : "ws:";
+  terminalUrl.searchParams.set("mode", input.mode);
+  terminalUrl.searchParams.set("sessionId", input.sessionId);
+
+  const socket = new WebSocket(terminalUrl);
+
+  await new Promise<void>((resolveFollow, rejectFollow) => {
+    let settled = false;
+    let ending = false;
+    const restore = () => {
+      stdin.off("data", onInput);
+      if (typeof stdin.setRawMode === "function") {
+        stdin.setRawMode(wasRaw);
+      }
+    };
+    const endAttach = async () => {
+      if (ending) {
+        return;
+      }
+      ending = true;
+      restore();
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        socket.close();
+      }
+      await postJson(
+        input.deps.fetcher,
+        `${apiUrl(input.deps.env)}/api/sessions/${encodeURIComponent(input.runId)}/rowers/${encodeURIComponent(input.agentId)}/attach/end`,
+        {
+          sessionId: input.sessionId
+        }
+      ).catch((cause) => {
+        input.deps.stderr.write(`\n[dragonboat] attach end failed: ${cause instanceof Error ? cause.message : String(cause)}\n`);
+      });
+      stdout.write("\n已退出划手进入模式。\n");
+      if (!settled) {
+        settled = true;
+        resolveFollow();
+      }
+    };
+    const onInput = (chunk: Buffer) => {
+      if (chunk.includes(0x1d)) {
+        void endAttach();
+        return;
+      }
+      if (input.mode === "view") {
+        return;
+      }
+      void postJson(
+        input.deps.fetcher,
+        `${apiUrl(input.deps.env)}/api/sessions/${encodeURIComponent(input.runId)}/rowers/${encodeURIComponent(input.agentId)}/attach/input`,
+        {
+          sessionId: input.sessionId,
+          text: chunk.toString("utf8")
+        }
+      ).catch((cause) => {
+        input.deps.stderr.write(`\n[dragonboat] input failed: ${cause instanceof Error ? cause.message : String(cause)}\n`);
+      });
+    };
+
+    socket.on("message", (data) => {
+      stdout.write(data.toString());
+    });
+    socket.on("open", () => {
+      if (typeof stdin.setRawMode === "function") {
+        stdin.setRawMode(true);
+      }
+      stdin.resume();
+      stdin.on("data", onInput);
+    });
+    socket.on("error", (cause) => {
+      restore();
+      if (!settled) {
+        settled = true;
+        rejectFollow(cause);
+      }
+    });
+    socket.on("close", () => {
+      if (!ending) {
+        void endAttach();
+      }
+    });
+  });
+}
+
+async function releaseRower(argv: string[], deps: Required<DragonBoatCliDependencies>) {
+  const flags = parseFlags(argv);
+  const runId = resolveRunForRowerCommand(flags, deps);
+  const agentId = requireFlag(flags, "agent");
+  await postJson(
+    deps.fetcher,
+    `${apiUrl(deps.env)}/api/sessions/${encodeURIComponent(runId)}/rowers/${encodeURIComponent(agentId)}/release`,
+    {}
+  );
+  deps.stdout.write(`已释放 ${agentId} 的接管锁。\n`);
+  return 0;
+}
+
+function safeCheckpointSegment(value: string) {
+  return value.replace(/[^A-Za-z0-9_.-]/g, "_");
+}
+
+function latestCheckpointPath(workspaceRoot: string, agentId: string) {
+  return join(workspaceRoot, ".dragonboat", "checkpoints", `${safeCheckpointSegment(agentId)}.current.json`);
+}
+
+function writeLocalCheckpoint(workspaceRoot: string, runId: string, checkpoint: RowerCheckpoint) {
+  const checkpointsDir = join(workspaceRoot, ".dragonboat", "checkpoints");
+  const historyDir = join(localRunsDir(workspaceRoot), runId, "checkpoints", safeCheckpointSegment(checkpoint.agentId));
+  const timestamp = safeCheckpointSegment(checkpoint.timestamp.replace(/[:]/g, "-"));
+  mkdirSync(checkpointsDir, { recursive: true });
+  mkdirSync(historyDir, { recursive: true });
+
+  const json = `${JSON.stringify(checkpoint, null, 2)}\n`;
+  const markdown = formatRowerCheckpointMarkdown(checkpoint);
+  const latestJson = latestCheckpointPath(workspaceRoot, checkpoint.agentId);
+  const latestMarkdown = join(checkpointsDir, `${safeCheckpointSegment(checkpoint.agentId)}.current.md`);
+  const historyJson = join(historyDir, `${timestamp}.json`);
+  const historyMarkdown = join(historyDir, `${timestamp}.md`);
+
+  writeFileSync(latestJson, json);
+  writeFileSync(latestMarkdown, markdown);
+  writeFileSync(historyJson, json);
+  writeFileSync(historyMarkdown, markdown);
+
+  return {
+    historyJson,
+    historyMarkdown,
+    latestJson,
+    latestMarkdown
+  };
+}
+
+function readLocalLatestCheckpoint(workspaceRoot: string, agentId: string) {
+  const filePath = latestCheckpointPath(workspaceRoot, agentId);
+  if (!existsSync(filePath)) {
+    return undefined;
+  }
+
+  const parsed = JSON.parse(readFileSync(filePath, "utf8"));
+  const validation = validateRowerCheckpoint(parsed);
+  return validation.ok ? validation.checkpoint : undefined;
+}
+
+async function handleRowerCheckpoint(action: string | undefined, argv: string[], deps: Required<DragonBoatCliDependencies>) {
+  const flags = parseFlags(argv);
+  const workspaceRoot = workspaceRootFromDeps(deps);
+  const runId = resolveRunForRowerCommand(flags, deps);
+  const agentId = requireFlag(flags, "agent");
+
+  if (action === "create") {
+    const checkpoint = createRowerCheckpoint({
+      agentId,
+      changedFiles: multiFlagValues(argv, "changed-file"),
+      currentFocus: optionalFlag(flags, "current-focus", ""),
+      decisions: multiFlagValues(argv, "decision"),
+      evidencePaths: multiFlagValues(argv, "evidence"),
+      handoffPaths: multiFlagValues(argv, "handoff"),
+      nextActions: multiFlagValues(argv, "next-action"),
+      openQuestions: multiFlagValues(argv, "open-question"),
+      risks: multiFlagValues(argv, "risk"),
+      runId,
+      status: optionalFlag(flags, "status", "running"),
+      summary: requireFlag(flags, "summary"),
+      taskId: optionalFlag(flags, "task", "task_general"),
+      timestamp: optionalFlag(flags, "timestamp", new Date().toISOString())
+    });
+    const paths = writeLocalCheckpoint(workspaceRoot, runId, checkpoint);
+    appendLocalEvent(eventsPathForRun(workspaceRoot, runId), {
+      actor: agentId,
+      createdAt: checkpoint.timestamp,
+      payload: {
+        ...checkpoint,
+        paths
+      },
+      runId,
+      taskId: checkpoint.taskId,
+      type: "rower.checkpoint.created"
+    });
+    deps.stdout.write(`划手状态检查点已创建：${paths.latestMarkdown}\n`);
+    return 0;
+  }
+
+  if (action === "latest") {
+    const checkpoint = readLocalLatestCheckpoint(workspaceRoot, agentId);
+    if (!checkpoint) {
+      throw new Error(`No valid 划手状态检查点 found for ${agentId}.`);
+    }
+    deps.stdout.write(flags.get("format") === "json" ? `${JSON.stringify(checkpoint, null, 2)}\n` : formatRowerCheckpointMarkdown(checkpoint));
+    return 0;
+  }
+
+  if (action === "list") {
+    const dir = join(localRunsDir(workspaceRoot), runId, "checkpoints", safeCheckpointSegment(agentId));
+    const files = existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith(".json")).sort() : [];
+    deps.stdout.write(`${files.join("\n")}${files.length ? "\n" : ""}`);
+    return 0;
+  }
+
+  if (action === "ensure") {
+    await readHookInput(flags, deps);
+    const checkpoint = readLocalLatestCheckpoint(workspaceRoot, agentId);
+    const eventsPath = eventsPathForRun(workspaceRoot, runId);
+    if (!checkpoint) {
+      appendLocalEvent(eventsPath, {
+        actor: agentId,
+        createdAt: new Date().toISOString(),
+        payload: {
+          agentId,
+          reason: "No valid 划手状态检查点 found before Claude Code Stop hook."
+        },
+        runId,
+        type: "rower.checkpoint.missing"
+      });
+      deps.stdout.write(
+        JSON.stringify({
+          decision: "block",
+          message: "缺少有效的划手状态检查点。请先用 dragonboat rower checkpoint create 生成检查点。"
+        })
+      );
+      deps.stdout.write("\n");
+      return 1;
+    }
+
+    appendLocalEvent(eventsPath, {
+      actor: agentId,
+      createdAt: new Date().toISOString(),
+      payload: checkpoint as unknown as Record<string, unknown>,
+      runId,
+      taskId: checkpoint.taskId,
+      type: "rower.checkpoint.validated"
+    });
+    deps.stdout.write(`${JSON.stringify({ decision: "allow", agentId, runId })}\n`);
+    return 0;
+  }
+
+  throw new Error("Usage: dragonboat rower checkpoint create|latest|list|ensure --agent <agentId>");
 }
 
 async function sendMessage(argv: string[], deps: Required<DragonBoatCliDependencies>) {
@@ -4218,7 +4593,7 @@ function makeWatchdogContinuationEvent(
 
 async function readHookInput(flags: Map<string, string>, deps: Required<DragonBoatCliDependencies>) {
   const directInput = flags.get("hook-input");
-  if (directInput !== undefined) {
+  if (directInput !== undefined && directInput !== "-") {
     return directInput;
   }
 
@@ -5087,6 +5462,10 @@ function usage() {
     "  dragonboat acceptance replay-launch [--events <events.ndjson> | --run <runId> | --latest] [--video <mp4>]",
     "  dragonboat rower start --role <role> --id <agentId> --prompt-file <file> [--new-wave]",
     "  dragonboat rower stop --id <agentId>",
+    "  dragonboat rower list [--run <runId> | --latest] [--format json|text]",
+    "  dragonboat rower attach --agent <agentId> --mode view|assist|takeover [--run <runId> | --latest] [--text <input>] [--end]",
+    "  dragonboat rower release --agent <agentId> [--run <runId> | --latest]",
+    "  dragonboat rower checkpoint create|latest|list|ensure --agent <agentId> [--run <runId> | --latest]",
     "  dragonboat message send --to <agentId> --type <type> --body <text>",
     "  dragonboat message broadcast --to <agentId,agentId> --body <text>",
     "  dragonboat handoff submit --from <agentId> --to <agentId> --task <taskId> --summary <text> --claim <text> --source <path-or-url> --confidence low|medium|high --open-question <text> --required-action <text> [--file <path>] [--no-ack]",
@@ -5116,6 +5495,7 @@ export async function runDragonBoatCli(argv = process.argv.slice(2), dependencie
     fetcher: dependencies.fetcher ?? fetch,
     openUrl: dependencies.openUrl ?? defaultOpenUrl,
     pid: dependencies.pid ?? process.pid,
+    portAvailable: dependencies.portAvailable ?? isPortAvailable,
     readFile: dependencies.readFile ?? ((path) => readFileSync(path, "utf8")),
     spawnBackground: dependencies.spawnBackground ?? defaultSpawnBackground,
     spawnForeground: dependencies.spawnForeground ?? defaultSpawnForeground,
@@ -5299,6 +5679,22 @@ export async function runDragonBoatCli(argv = process.argv.slice(2), dependencie
 
     if (command === "rower" && subcommand === "start") {
       return await startRower(rest, deps);
+    }
+
+    if (command === "rower" && subcommand === "list") {
+      return await listRowers(rest, deps);
+    }
+
+    if (command === "rower" && subcommand === "attach") {
+      return await attachRower(rest, deps);
+    }
+
+    if (command === "rower" && subcommand === "release") {
+      return await releaseRower(rest, deps);
+    }
+
+    if (command === "rower" && subcommand === "checkpoint") {
+      return await handleRowerCheckpoint(rest[0], rest.slice(1), deps);
     }
 
     if (command === "rower" && subcommand === "stop") {

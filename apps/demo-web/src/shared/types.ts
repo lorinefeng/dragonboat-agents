@@ -90,6 +90,15 @@ export type DemoEventType =
   | "supervision.wait.completed"
   | "supervision.wait.timeout"
   | "supervision.wait.blocked"
+  | "rower.attach.started"
+  | "rower.attach.input_sent"
+  | "rower.attach.ended"
+  | "rower.attach.blocked"
+  | "rower.takeover.released"
+  | "rower.checkpoint.requested"
+  | "rower.checkpoint.created"
+  | "rower.checkpoint.missing"
+  | "rower.checkpoint.validated"
   | "rower.stop.requested"
   | "steerer.review.completed"
   | "watchdog.continuation.recorded";
@@ -100,6 +109,19 @@ export interface CrewMember {
   platform: AgentPlatform;
   role: AgentRole;
   status: AgentStatus;
+  attach?: {
+    mode: "assist" | "takeover" | "view";
+    operator: string;
+    sessionId: string;
+    status: "assisting" | "taken_over" | "viewing";
+    startedAt: string;
+  };
+  latestCheckpoint?: {
+    status: string;
+    summary: string;
+    taskId: string;
+    timestamp: string;
+  };
 }
 
 export interface DemoTask {
