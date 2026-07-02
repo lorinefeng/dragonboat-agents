@@ -10,7 +10,7 @@ DragonBoat 是一个 local-first 的多 Agent 编程协调层：让前台 Codex 
 
 DragonBoat 不是另一个通用 Agent 外壳。它关注的是多 Agent 协作语义：谁负责规划，谁负责执行，Agent 之间说了什么，哪些结论有证据，哪些结果仍需人工复核。浏览器里的 Web command deck 是监控与回放面板；真正的会话从项目终端启动，保留 Codex 和 Claude Code 的原生体验。
 
-![DragonBoat command deck showing a Codex steerer, one Claude rower, and the Agents group chat](docs/assets/dragonboat-smoke-crew-graph.png)
+![DragonBoat dark brand wordmark logo](docs/assets/dragonboat-smoke-crew-graph.png)
 
 <details>
 <summary>更多界面截图</summary>
@@ -234,7 +234,7 @@ DragonBoat is a local-first command deck that lets Codex steer Claude Code worke
 
 DragonBoat turns multiple agentic coding CLIs into an auditable crew: one high-context steerer plans the work, lower-cost or specialized rowers execute sealed tasks, and the local command deck shows who is doing what, what they said, what they proved, and what still needs review.
 
-![DragonBoat command deck showing a Codex steerer, one Claude rower, and the Agents group chat](docs/assets/dragonboat-smoke-crew-graph.png)
+![DragonBoat dark brand wordmark logo](docs/assets/dragonboat-smoke-crew-graph.png)
 
 The Web deck is a monitor and replay surface. Sessions are created from the project terminal by the foreground Codex steerer, then projected into the browser as a live crew graph, Agents group chat, readable rower output, and evidence queue.
 
