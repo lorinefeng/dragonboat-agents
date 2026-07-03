@@ -2,13 +2,13 @@
   "name": "dragonboat-crew",
   "version": "0.1.0",
   "description": "DragonBoat is a local-first multi-agent coordination layer for Codex and Claude Code crews.",
-  "homepage": "https://github.com/lorinefeng/dragonboat-crew#readme",
+  "homepage": "https://github.com/lorinefeng/dragonboat-agents#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lorinefeng/dragonboat-crew.git"
+    "url": "git+https://github.com/lorinefeng/dragonboat-agents.git"
   },
   "bugs": {
-    "url": "https://github.com/lorinefeng/dragonboat-crew/issues"
+    "url": "https://github.com/lorinefeng/dragonboat-agents/issues"
   },
   "keywords": [
     "multi-agent",

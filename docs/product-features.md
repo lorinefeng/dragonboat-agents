@@ -1075,3 +1075,28 @@ Known gaps:
 - The v0 CLI attach flow now supports a continuous interactive terminal bridge over `/api/attach/:runId/:agentId`; terminal resizing and richer TUI fidelity remain follow-ups.
 - Checkpoints are validated for required structure, but DragonBoat does not verify every stated claim inside the checkpoint.
 - The Web deck displays the latest checkpoint summary, not the full checkpoint detail view.
+
+## 2026-07-03 — Split Launch Guides And Privacy-Safe README Hero
+
+DragonBoat now uses a simpler launch README with separate Chinese and English guides, and the public first screen no longer depends on a local workspace screenshot.
+
+Implemented user-facing capabilities:
+
+- The root README is now a concise launch page instead of one long bilingual document stitched together in a single scroll.
+- The top of the root README links directly to `docs/README.zh-CN.md` and `docs/README.en.md`, so readers can jump into their preferred language immediately.
+- The first hero asset now uses the DragonBoat dark wordmark instead of a screenshot that could expose local workspace names.
+- The new Chinese and English guides explain DragonBoat in plain language: lead agent, helper agent, agent chat, and proof of done, before introducing project terms such as task packet or evidence.
+- Public repository metadata now points at `lorinefeng/dragonboat-agents`, matching the latest GitHub repository target.
+- The release-readiness check now requires the split language guides to exist as part of the public package surface.
+
+User-facing value:
+
+- New users get a shorter, easier-to-scan entry page instead of a wall of unfamiliar terms.
+- Chinese and English readers no longer need to scroll past a full second language block before reaching the part they actually want.
+- The launch surface is safer to publish because the first visual no longer risks leaking local project names or other machine-specific details.
+- DragonBoat's core promise is clearer: one lead agent coordinates a small crew, helper agents do bounded work, and the browser deck helps the user review whether the result is truly ready.
+
+Known gaps:
+
+- The project still needs a refreshed set of fully sanitized public product screenshots if it wants to show a richer first-screen demo again.
+- Some deeper technical docs still use internal coordination vocabulary more heavily than the new launch README and language guides.

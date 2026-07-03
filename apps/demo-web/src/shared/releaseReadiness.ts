@@ -25,6 +25,8 @@ const REQUIRED_RELEASE_FILES = [
   "package.json",
   "bin/dragonboat.mjs",
   "bin/create-dragonboat.mjs",
+  "docs/README.en.md",
+  "docs/README.zh-CN.md",
   "docs/model-routing.md",
   "docs/security-and-privacy.md",
   "docs/release-checklist.md",
@@ -160,6 +162,8 @@ export function checkReleaseReadiness(rootDir: string): ReleaseReadinessReport {
     "When To Use It",
     "Why It Matters",
     "Paste this into the foreground Codex CLI",
+    "docs/README.en.md",
+    "docs/README.zh-CN.md",
     "dragonboat steer",
     "dragonboat smoke run",
     "release checklist",
@@ -174,7 +178,7 @@ export function checkReleaseReadiness(rootDir: string): ReleaseReadinessReport {
       "README explains first-run product story",
       hasAll(readme, readmeNeedles),
       hasAll(readme, readmeNeedles)
-        ? "60-second quickstart, real product screenshots, product value, smoke checks, and privacy links found"
+        ? "60-second quickstart, language guide links, public media, product value, smoke checks, and privacy links found"
         : "missing one or more launch-story sections or screenshot links"
     )
   );

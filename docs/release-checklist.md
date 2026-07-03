@@ -111,7 +111,7 @@ Do not publish if any of these are true:
 - `dragonboat release check` fails.
 - `npm pack --dry-run` includes `.dragonboat/runs`, `.dragonboat-worktrees`,
   `.worktrees`, `.env`, `node_modules`, or build output folders.
-- The README first screen does not show real command-deck screenshots.
+- The README first screen does not show privacy-safe public launch media such as a brand logo or sanitized product screenshots.
 - The empty Web deck exposes `Internal Server Error` as the main user path.
 - The Web deck still shows a browser-only `New session` path that cannot launch
   the foreground Codex steerer.
